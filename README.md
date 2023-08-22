@@ -1,14 +1,15 @@
 # wow-addon
 
+## location
 would go into
-C:\[...]\World of Warcraft\_retail_\Interface\AddOns
+C:\[...]\World of Warcraft\_retail_\Interface\AddOns  
 
+## slash commands
+`/auau`
+* show if tracking
 
-/auau
-show if tracking
+`/auau off`
+* disable tracking
 
-/auau off
-disable tracking
-
-/auau on
-enable tracking
+`/auau on`
+* enable tracking
