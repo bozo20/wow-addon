@@ -1,6 +1,10 @@
 local f = CreateFrame("Frame")
 
+f.active = true
+
 function f:OnEvent(event, ...)
+  if not f.active then return end
+
 	self[event](self, event, ...)
 end
 
@@ -44,15 +48,15 @@ local aurasMeta = {
 local auras = setmetatable({ store = {}, debug = false }, aurasMeta)
 
 -- /auaura
-SLASH_AU_AURA1 = "/auaura"
+SLASH_AU_AURA1 = "/auau"
 
 SlashCmdList["AU_AURA"] = function (message, _editBox)
-  if message == "" then
-    print("dump auras")
-    DevTools_Dump(auras)
-    print("dump buffs")
-    DevTools_Dump(buffs)
+  if message == "off" then
+    f.active = false
+  elseif message == "on" then
+    f.active = true
   end
+  print(format("Aura tracking active? %s", tostring(f.active)))
 end
 
 local function debugAura(unitTarget, auraData)
