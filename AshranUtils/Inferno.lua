@@ -28,9 +28,11 @@ local function makeText(text)
 end
 
 local function announceInferno()
-  makeText("ancient inferno spawned")
   if UnitInBattleground("player") and GetBattlefieldInstanceExpiration() == 0 then
+    makeText("ancient inferno spawned")
     -- INSTANCE_CHAT, RAID, PARTY, SAY (but then no icons)
+    -- (id: 6493, event: AREA_POIS_UPDATED, skull on map)
+    --SendChatMessage("{rt8} ancient inferno spawned", "INSTANCE_CHAT")
     SendChatMessage("{rt8} ancient inferno spawned", "INSTANCE_CHAT")
   end
 end

@@ -27,11 +27,60 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 [388035] = makeBuff(false, "Fortitude of the Bear"),
                 [171249] = makeBuff(true, "prot", "INSTANCE_CHAT", false, 116411),
                 [357650] = makeBuff(false, "mini BL"),
+                [157504] = makeBuff(false, "cloudburst totem"),
                 --[197916] = { false, "Lebenszyklus (Beleben)" },
                 --[197919] = { false, "Lebenszyklus (Einhüllender Nebel)" },
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
-                --[61295] = makeBuff(false, "Springflut", nil, false, 116411) --}
+                [61295] = makeBuff(false, "Springflut", nil, false, 116411)
+}
+local function makeOnceExpiration(id, after)
+  local expiration = { expires = expires, type = "once" }
+  local function callback()
+    local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+    if not aura then return end
+
+    local message = format("%s in %d seconds!", aura.name, aura.duration - after)
+    RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
+    PlaySound(8959)
+  end
+  expiration.makeCallback = function ()
+    C_Timer.After(after, callback)
+  end
+
+  return expiration
+end
+
+local function makeRepeatingExpiration(id, after, announce)
+  local expiration = { expires = expires, type = "countdown" }
+  local function callback()
+    local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+    if not aura then return end
+
+    local seconds = aura.expirationTime - GetTime()
+    local message = format("%s for %d more seconds", GetSpellLink(id), seconds)
+    if announce and UnitInBattleground("player") then
+      SendChatMessage(message, "SAY")
+    end
+    print(message)
+    expiration.makeCallback()
+  end
+  expiration.makeCallback = function ()
+    C_Timer.After(after, callback)
+  end
+
+  return expiration
+end
+
+local expirations = {
+  -- cloudburst
+  [157504] = makeOnceExpiration(157504, 10),
+  -- Springflut
+  [61295] = makeRepeatingExpiration(61295, 6),
+  -- prot
+  [171249] = makeRepeatingExpiration(171249, 5, true),
+  -- speed
+  [171250] = makeRepeatingExpiration(171250, 5, true)
 }
 local aurasMeta = {
   __index = function (self, auraInstanceID)
@@ -60,7 +109,7 @@ SlashCmdList["AU_AURA"] = function (message, _editBox)
 end
 
 local function debugAura(unitTarget, auraData)
-  print(format("LOCAL: %s start, target = %s, source = %s, spellId = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId))
+  print(format("LOCAL: %s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId, auraData.auraInstanceID))
 end
 
 function f:UNIT_AURA(event, unitTarget, updateInfo)
@@ -84,10 +133,21 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
           if buff.itemID then
             message = format("%s (%s)", message, (select(2, GetItemInfo(buff.itemID))))
           end
-          SendChatMessage(message, buff.channel)
+
+          if unitTarget == "player" then
+            SendChatMessage(message, buff.channel)
+          else
+            local message = format("%s %s", message, unitTarget)
+            SendChatMessage(message, "SAY")
+          end
         end
 
         print(format("LOCAL: %s, track? %s", message, tostring(buff.track)))
+      end
+
+      local expiration = expirations[auraData.spellId]
+      if expiration then
+        expiration.makeCallback()
       end
     end
   elseif updateInfo.updatedAuraInstanceIDs and next(updateInfo.updatedAuraInstanceIDs) then
@@ -113,5 +173,5 @@ end
 
 f:RegisterEvent("ADDON_LOADED")
 --f:RegisterEvent("UNIT_AURA")
-f:RegisterUnitEvent("UNIT_AURA", "player")
+f:RegisterUnitEvent("UNIT_AURA", "player", "Simeoa-TwistingNether")
 f:SetScript("OnEvent", f.OnEvent)
