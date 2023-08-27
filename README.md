@@ -6,8 +6,9 @@ C:\[...]\World of Warcraft\_retail_\Interface\AddOns
 
 ## toc
 comment out file with #
-`Mounts.lua`
-`#Mounts.lua`
+`Mounts.lua`  
+becomes
+`#Mounts.lua`  
 
 ## slash commands
 `/auau`
