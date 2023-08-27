@@ -1,6 +1,12 @@
+local myAddonName, ns = ...
+
 local f = CreateFrame("Frame")
 
 f.active = true
+f.watchPlayers = function ()
+  f:RegisterUnitEvent("UNIT_AURA", "player", "raid1")
+  -- local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
+end
 
 function f:OnEvent(event, ...)
   if not f.active then return end
@@ -9,7 +15,7 @@ function f:OnEvent(event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
-  if addOnName == "AshranUtils" then
+  if addOnName == myAddonName then
     print(format("Hello %s! Auras.lua loaded.", UnitName("player")))
   end
 end
@@ -32,15 +38,15 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 --[197919] = { false, "Lebenszyklus (Einhüllender Nebel)" },
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
-                [61295] = makeBuff(false, "Springflut", nil, false, 116411)
+                --[61295] = makeBuff(false, "Springflut", nil, false, 116411)
 }
-local function makeOnceExpiration(id, after)
+local function makeOnceExpiration(id, after, total)
   local expiration = { expires = expires, type = "once" }
   local function callback()
     local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
     if not aura then return end
 
-    local message = format("%s in %d seconds!", aura.name, aura.duration - after)
+    local message = format("%s in %d seconds!", aura.name, total - after)
     RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
     PlaySound(8959)
   end
@@ -62,7 +68,7 @@ local function makeRepeatingExpiration(id, after, announce)
     if announce and UnitInBattleground("player") then
       SendChatMessage(message, "SAY")
     end
-    print(message)
+    print("LOCAL: "..message)
     expiration.makeCallback()
   end
   expiration.makeCallback = function ()
@@ -74,13 +80,13 @@ end
 
 local expirations = {
   -- cloudburst
-  [157504] = makeOnceExpiration(157504, 10),
+  [157504] = makeOnceExpiration(157504, 10, 15),
   -- Springflut
-  [61295] = makeRepeatingExpiration(61295, 6),
+  --[61295] = makeRepeatingExpiration(61295, 6),
   -- prot
-  [171249] = makeRepeatingExpiration(171249, 5, true),
+  [171249] = makeRepeatingExpiration(171249, 5, not true),
   -- speed
-  [171250] = makeRepeatingExpiration(171250, 5, true)
+  [171250] = makeRepeatingExpiration(171250, 5, not true)
 }
 local aurasMeta = {
   __index = function (self, auraInstanceID)
@@ -122,7 +128,6 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
 
       local buff = buffs[auraData.spellId]
       if buff then
-        --debugAura(unitTarget, auraData)
         local source = UnitName(auraData.sourceUnit)
         if buff.banner then source = 'banner' end
         auras[auraData.auraInstanceID] = { source, buff }
@@ -137,8 +142,9 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
           if unitTarget == "player" then
             SendChatMessage(message, buff.channel)
           else
-            local message = format("%s %s", message, unitTarget)
-            SendChatMessage(message, "SAY")
+            local message = format("%s on %s", message, UnitName(unitTarget))
+            --SendChatMessage(message, "SAY")
+            print("LOCAL: "..message)
           end
         end
 
@@ -171,7 +177,13 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
   end
 end
 
+function f:PLAYER_ENTERING_BATTLEGROUND()
+  print(format("entering battleground %s", GetRealZoneText()))
+  f.watchPlayers()
+end
+
 f:RegisterEvent("ADDON_LOADED")
 --f:RegisterEvent("UNIT_AURA")
-f:RegisterUnitEvent("UNIT_AURA", "player", "Simeoa-TwistingNether")
+f:RegisterEvent("PLAYER_ENTERING_BATTLEGROUND")
+f.watchPlayers()
 f:SetScript("OnEvent", f.OnEvent)

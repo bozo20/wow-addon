@@ -1,3 +1,5 @@
+local myAddonName, ns = ...
+
 local f = CreateFrame("Frame")
 
 function f:OnEvent(event, ...)
@@ -5,7 +7,7 @@ function f:OnEvent(event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
-  if addOnName == "AshranUtils" then
+  if addOnName == myAddonName then
     print(format("Hello %s! Inferno.lua loaded.", UnitName("player")))
   end
 end
