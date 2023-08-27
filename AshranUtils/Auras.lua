@@ -5,7 +5,7 @@ f.active = true
 function f:OnEvent(event, ...)
   if not f.active then return end
 
-	self[event](self, event, ...)
+  self[event](self, event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
