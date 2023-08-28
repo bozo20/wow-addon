@@ -2,22 +2,21 @@ local myAddonName, ns = ...
 
 local f = CreateFrame("Frame")
 
-f.active = true
+function f:ADDON_LOADED(event, addOnName)
+  if addOnName == myAddonName then
+    print(format("Hello %s! Auras.lua loaded.", UnitName("player")))
+  end
+end
+
 f.watchPlayers = function ()
   f:RegisterUnitEvent("UNIT_AURA", "player", "raid1")
   -- local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
 end
 
 function f:OnEvent(event, ...)
-  if not f.active then return end
+  if not ns.AddonOptions.db.auras.active then return end
 
   self[event](self, event, ...)
-end
-
-function f:ADDON_LOADED(event, addOnName)
-  if addOnName == myAddonName then
-    print(format("Hello %s! Auras.lua loaded.", UnitName("player")))
-  end
 end
 
 local function makeBuff(track, name, channel, banner, itemID)
@@ -38,7 +37,7 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 --[197919] = { false, "Lebenszyklus (Einhüllender Nebel)" },
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
-                --[61295] = makeBuff(false, "Springflut", nil, false, 116411)
+                [61295] = makeBuff(false, "Springflut", nil, false, 116411)
 }
 local function makeOnceExpiration(id, after, total)
   local expiration = { expires = expires, type = "once" }
@@ -107,11 +106,11 @@ SLASH_AU_AURA1 = "/auau"
 
 SlashCmdList["AU_AURA"] = function (message, _editBox)
   if message == "off" then
-    f.active = false
+    AshranUtilitiesDB.auras.active = false
   elseif message == "on" then
-    f.active = true
+    AshranUtilitiesDB.auras.active = true
   end
-  print(format("Aura tracking active? %s", tostring(f.active)))
+  print(format("Aura tracking active? %s", tostring(AshranUtilitiesDB.auras.active)))
 end
 
 local function debugAura(unitTarget, auraData)
@@ -143,7 +142,10 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             SendChatMessage(message, buff.channel)
           else
             local message = format("%s on %s", message, UnitName(unitTarget))
-            --SendChatMessage(message, "SAY")
+            local name, server = UnitName(unitTarget)
+            if name == "Simeoa" then
+              SendChatMessage(message, "SAY")
+            end
             print("LOCAL: "..message)
           end
         end

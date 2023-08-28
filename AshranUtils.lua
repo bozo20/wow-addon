@@ -1,5 +1,83 @@
 local myAddonName, ns = ...
 
+local DEFAULTS = { inferno = { active = true, debug = true },
+                   auras = { active = true, debug = true } }
+
+local function initDB(reset)
+  if reset then
+    AshranUtilitiesDB = AshranUtilitiesDB or DEFAULTS
+  else
+    AshranUtilitiesDB = CopyTable(DEFAULTS)
+  end
+end
+
+local AddonOptions = CreateFrame("Frame")
+
+ns.AddonOptions = AddonOptions
+
+function AddonOptions:CreateCheckbox(id, option, label, parent, updateFunc)
+  local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
+  cb.Text:SetText(label)
+  local function UpdateOption(value)
+    self.db[id][option] = value
+    cb:SetChecked(value)
+    if updateFunc then
+      updateFunc(value)
+    end
+  end
+  UpdateOption(self.db[id][option])
+  -- there already is an existing OnClick script that plays a sound, hook it
+  cb:HookScript("OnClick", function (_, btn, down)
+    UpdateOption(cb:GetChecked())
+  end)
+  EventRegistry:RegisterCallback("AddonOptions.OnReset", function ()
+    UpdateOption(DEFAULTS[id][option])
+  end, cb)
+
+  return cb
+end
+
+function AddonOptions:Initialize()
+  self.db = AshranUtilitiesDB
+
+  for k, v in pairs(DEFAULTS) do
+    self.db[k] = self.db[k] or {}
+    for kk, vv in pairs(v) do
+      if self.db[k][kk] == nil then
+        self.db[k][kk] = vv
+      end
+    end
+  end
+
+  self.panel_main = CreateFrame("Frame")
+  self.panel_main.name = myAddonName
+
+  local auras_active = self:CreateCheckbox("auras", "active", "Active", self.panel_main)
+  auras_active:SetPoint("TOPLEFT", 20, -20)
+
+  local auras_debug = self:CreateCheckbox("auras", "debug", "Debug", self.panel_main, self.UpdateIcon)
+  auras_debug:SetPoint("TOPLEFT", auras_active, 0, -30)
+
+  local auras_reset = CreateFrame("Button", nil, self.panel_main, "UIPanelButtonTemplate")
+  auras_reset:SetPoint("TOPLEFT", auras_debug, 0, -40)
+  auras_reset:SetText(RESET)
+  auras_reset:SetWidth(100)
+  auras_reset:SetScript("OnClick", function ()
+    AshranUtilitiesDB = initDB(true)
+    self.db = AshranUtilitiesDB
+    EventRegistry:TriggerEvent("AddonOptions.OnReset")
+  end)
+
+  InterfaceOptions_AddCategory(self.panel_main)
+  InterfaceAddOnsList_Update()
+end
+
+SLASH_AddonOptions1 = "/auui"
+
+SlashCmdList.AddonOptions = function (msg, editBox)
+	InterfaceOptionsFrame_OpenToCategory(AddonOptions.panel_main)
+end
+
 local f = CreateFrame("Frame")
 
 function f:OnEvent(event, ...)
@@ -9,6 +87,8 @@ end
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
     print(format("Hello %s! AshranUtils.lua loaded.", UnitName("player")))
+    initDB()
+    AddonOptions:Initialize()
   end
 end
 

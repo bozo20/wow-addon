@@ -1,6 +1,7 @@
 ## Interface: 100105
 ## Version: 1.0.0
 ## Title: AshranUtilities
+## SavedVariables: AshranUtilitiesDB
 ## Notes: Ashran utilities
 ## Author: Soogioh
 
