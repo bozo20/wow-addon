@@ -141,11 +141,9 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
           if unitTarget == "player" then
             SendChatMessage(message, buff.channel)
           else
-            local message = format("%s on %s", message, UnitName(unitTarget))
+            local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
             local name, server = UnitName(unitTarget)
-            if name == "Simeoa" then
-              SendChatMessage(message, "SAY")
-            end
+            SendChatMessage(message, "SAY")
             print("LOCAL: "..message)
           end
         end
@@ -170,8 +168,14 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
         if not source or not buff then return end
 
         if buff.track and not buff.banner and UnitInBattleground("player") then
-          -- "PARTY", "INSTANCE_CHAT", "SAY"
-          SendChatMessage(format("{rt7} %s expired", buff.name), buff.channel)
+          if unitTarget == "player" then
+            SendChatMessage(format("{rt7} %s expired", buff.name), buff.channel)
+          else
+            local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
+            local name, server = UnitName(unitTarget)
+            SendChatMessage(message, "SAY")
+            print("LOCAL: "..message)
+          end
         end
         print(format("LOCAL: %s by %s expired", buff.name, source))
       end

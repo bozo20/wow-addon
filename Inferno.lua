@@ -3,7 +3,9 @@ local myAddonName, ns = ...
 local f = CreateFrame("Frame")
 
 function f:OnEvent(event, ...)
-	self[event](self, event, ...)
+  if not AshranUtilitiesDB.inferno.active then return end
+
+  self[event](self, event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
@@ -25,16 +27,13 @@ end
 
 -- /dump C_AreaPoiInfo.GetAreaPOIInfo(1478, 6493)
 
-local function makeText(text)
+local function makeLocalAnnouncement(text)
   RaidNotice_AddMessage(RaidWarningFrame, text, ChatTypeInfo["RAID_WARNING"])
 end
 
 local function announceInferno()
   if UnitInBattleground("player") and GetBattlefieldInstanceExpiration() == 0 then
-    makeText("ancient inferno spawned")
-    -- INSTANCE_CHAT, RAID, PARTY, SAY (but then no icons)
-    -- (id: 6493, event: AREA_POIS_UPDATED, skull on map)
-    --SendChatMessage("{rt8} ancient inferno spawned", "INSTANCE_CHAT")
+    makeLocalAnnouncement("ancient inferno spawned")
     SendChatMessage("{rt8} ancient inferno spawned", "INSTANCE_CHAT")
   end
 end
@@ -42,8 +41,6 @@ end
 local ashran = { inferno = false }
 
 function f:ZONE_CHANGED_NEW_AREA()
-  -- print(format("entered zone %s", GetRealZoneText()))
-
   if GetRealZoneText() == "Ashran" then
     print(format("inferno spawned? %s", tostring(isInfernoSpawned())))
   else

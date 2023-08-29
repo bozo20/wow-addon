@@ -4,7 +4,7 @@ local DEFAULTS = { inferno = { active = true, debug = true },
                    auras = { active = true, debug = true } }
 
 local function initDB(reset)
-  if reset then
+  if not reset then
     AshranUtilitiesDB = AshranUtilitiesDB or DEFAULTS
   else
     AshranUtilitiesDB = CopyTable(DEFAULTS)
