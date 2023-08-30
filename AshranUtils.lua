@@ -3,12 +3,8 @@ local myAddonName, ns = ...
 local DEFAULTS = { inferno = { active = true, debug = true },
                    auras = { active = true, debug = true } }
 
-local function initDB(reset)
-  if not reset then
-    AshranUtilitiesDB = AshranUtilitiesDB or DEFAULTS
-  else
-    AshranUtilitiesDB = CopyTable(DEFAULTS)
-  end
+local function initDB()
+  AshranUtilitiesDB = AshranUtilitiesDB or {}
 end
 
 local AddonOptions = CreateFrame("Frame")
@@ -52,24 +48,37 @@ function AddonOptions:Initialize()
   self.panel_main = CreateFrame("Frame")
   self.panel_main.name = myAddonName
 
-  local auras_active = self:CreateCheckbox("auras", "active", "Active", self.panel_main)
+  local auras_active = self:CreateCheckbox("auras", "active", "Auras announce", self.panel_main)
   auras_active:SetPoint("TOPLEFT", 20, -20)
 
-  local auras_debug = self:CreateCheckbox("auras", "debug", "Debug", self.panel_main, self.UpdateIcon)
+  local auras_debug = self:CreateCheckbox("auras", "debug", "Auras debug", self.panel_main)
   auras_debug:SetPoint("TOPLEFT", auras_active, 0, -30)
 
+  local inferno_active = self:CreateCheckbox("inferno", "active", "Inferno announce", self.panel_main)
+  inferno_active:SetPoint("TOPLEFT", auras_debug, 0, -30)
+
+  local inferno_debug = self:CreateCheckbox("inferno", "debug", "Inferno debug", self.panel_main)
+  inferno_debug:SetPoint("TOPLEFT", inferno_active, 0, -30)
+
   local auras_reset = CreateFrame("Button", nil, self.panel_main, "UIPanelButtonTemplate")
-  auras_reset:SetPoint("TOPLEFT", auras_debug, 0, -40)
+  auras_reset:SetPoint("TOPLEFT", inferno_debug, 0, -40)
   auras_reset:SetText(RESET)
   auras_reset:SetWidth(100)
   auras_reset:SetScript("OnClick", function ()
-    AshranUtilitiesDB = initDB(true)
+    AshranUtilitiesDB = CopyTable(DEFAULTS)
     self.db = AshranUtilitiesDB
     EventRegistry:TriggerEvent("AddonOptions.OnReset")
   end)
 
   InterfaceOptions_AddCategory(self.panel_main)
-  InterfaceAddOnsList_Update()
+
+  -- sub panel
+  -- local panel_inferno = CreateFrame("Frame")
+  -- panel_inferno.name = "Inferno"
+  -- panel_inferno.parent = self.panel_main.name
+
+  -- InterfaceOptions_AddCategory(panel_inferno)
+  -- InterfaceAddOnsList_Update()
 end
 
 SLASH_AddonOptions1 = "/auui"

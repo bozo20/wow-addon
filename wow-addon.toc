@@ -6,6 +6,6 @@
 ## Author: Soogioh
 
 AshranUtils.lua
-Inferno.lua
 Auras.lua
+Inferno.lua
 Mounts.lua

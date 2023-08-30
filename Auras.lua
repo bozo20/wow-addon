@@ -1,5 +1,19 @@
 local myAddonName, ns = ...
 
+local function isActive()
+  return ns.AddonOptions.db.auras.active
+end
+
+local function isDebug()
+  return ns.AddonOptions.db.auras.debug
+end
+
+local function debugPrint(message)
+  if not isDebug() then return end
+
+  print(message)
+end
+
 local f = CreateFrame("Frame")
 
 function f:ADDON_LOADED(event, addOnName)
@@ -14,7 +28,7 @@ f.watchPlayers = function ()
 end
 
 function f:OnEvent(event, ...)
-  if not ns.AddonOptions.db.auras.active then return end
+  if not isActive() then return end
 
   self[event](self, event, ...)
 end
@@ -67,7 +81,7 @@ local function makeRepeatingExpiration(id, after, announce)
     if announce and UnitInBattleground("player") then
       SendChatMessage(message, "SAY")
     end
-    print("LOCAL: "..message)
+    debugPrint("LOCAL: "..message)
     expiration.makeCallback()
   end
   expiration.makeCallback = function ()
@@ -144,11 +158,11 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
             local name, server = UnitName(unitTarget)
             SendChatMessage(message, "SAY")
-            print("LOCAL: "..message)
+            debugPrint("LOCAL: "..message)
           end
         end
 
-        print(format("LOCAL: %s, track? %s", message, tostring(buff.track)))
+        debugPrint(format("LOCAL: %s, track? %s", message, tostring(buff.track)))
       end
 
       local expiration = expirations[auraData.spellId]
@@ -174,17 +188,17 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
             local name, server = UnitName(unitTarget)
             SendChatMessage(message, "SAY")
-            print("LOCAL: "..message)
+            debugPrint("LOCAL: "..message)
           end
         end
-        print(format("LOCAL: %s by %s expired", buff.name, source))
+        debugPrint(format("LOCAL: %s by %s expired", buff.name, source))
       end
     end
   end
 end
 
 function f:PLAYER_ENTERING_BATTLEGROUND()
-  print(format("entering battleground %s", GetRealZoneText()))
+  debugPrint(format("entering battleground %s", GetRealZoneText()))
   f.watchPlayers()
 end
 
