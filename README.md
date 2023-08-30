@@ -19,3 +19,7 @@ becomes
 
 `/auau on`
 * enable tracking
+
+## addon options
+`/auui`
+* opens settings
