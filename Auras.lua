@@ -47,19 +47,23 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 [171249] = makeBuff(true, "prot", "INSTANCE_CHAT", false, 116411),
                 [357650] = makeBuff(false, "mini BL"),
                 [157504] = makeBuff(false, "cloudburst totem"),
-                --[197916] = { false, "Lebenszyklus (Beleben)" },
-                --[197919] = { false, "Lebenszyklus (Einhüllender Nebel)" },
+                [197916] = makeBuff(false, "Lebenszyklus (Beleben)"),
+                [197919] = makeBuff(false, "Lebenszyklus (Einhüllender Nebel)"),
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
                 [61295] = makeBuff(false, "Springflut", nil, false, 116411)
 }
+
+local function rgb(r, g, b, a)
+  return r / 255, g / 255, b / 255, a or 0.75
+end
+
 local function makeOnceExpiration(id, after, total)
-  local expiration = { expires = expires, type = "once" }
+  local expiration = {}
   local function callback()
     local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
     if not aura then return end
 
-    -- DevTools_Dump(aura)
     local collected = (aura.points[1] or 0) / 1000
     local message = format("%s in %d seconds! %d k healing", aura.name, total - after, collected)
     RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
@@ -74,7 +78,7 @@ local function makeOnceExpiration(id, after, total)
       local collected = (aura.points[1] or 0) / 1000
       local message = format("%s! %d k healing", aura.name, collected)
       RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
-      print(message)
+      --print(message)
     end, total - after)
   end
   expiration.makeCallback = function ()
@@ -85,7 +89,7 @@ local function makeOnceExpiration(id, after, total)
 end
 
 local function makeRepeatingExpiration(id, after, announce)
-  local expiration = { expires = expires, type = "countdown" }
+  local expiration = {}
   local function callback()
     local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
     if not aura then return end
@@ -95,7 +99,6 @@ local function makeRepeatingExpiration(id, after, announce)
     if announce and UnitInBattleground("player") then
       SendChatMessage(message, "SAY")
     end
-    debugPrint("LOCAL: "..message)
     expiration.makeCallback()
   end
   expiration.makeCallback = function ()
@@ -107,22 +110,35 @@ end
 
 local function makeDecreasingStatusBar(id, name)
   local expiration = {}
+  local formatString = "%s: %.1f s left"
+  local alpha = 0.5
   expiration.makeCallback = function (auraData)
-    print("in makeDeacreasingStatusBar")
-    local maxValue = auraData.expirationTime - GetTime()
+    local remainingTime = auraData.expirationTime - GetTime()
+    local maxValue = remainingTime * 10
     local name = name or auraData.name
+
     local statusBar = _G["DecreasingStatusBar"] or CreateFrame("StatusBar", "DecreasingStatusBar", UIParent)
     statusBar:SetPoint("CENTER", 0, -30)
-    statusBar:SetReverseFill(true)
+    -- statusBar:SetReverseFill(not true)
     statusBar:SetSize(100, 30)
     statusBar:SetMinMaxValues(0, maxValue)
+
     statusBar.texture = statusBar.texture or statusBar:CreateTexture()
-    statusBar.texture:SetColorTexture(255 / 255, 215 / 255, 0, 0.75)
+    statusBar.texture:SetColorTexture(rgb(0, 217, 255, alpha))
     statusBar:SetStatusBarTexture(statusBar.texture)
+
     statusBar:SetValue(maxValue)
+
     statusBar.fs = statusBar.fs or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     statusBar.fs:SetPoint("CENTER")
-    statusBar.fs:SetText(format("%s: %d s left", name, maxValue))
+    statusBar.fs:SetText(format(formatString, name, remainingTime))
+
+    local icon = select(8, GetSpellInfo(id))
+    statusBar.icon = statusBar.icon or statusBar:CreateTexture()
+    statusBar.icon:SetTexture(icon)
+    statusBar.icon:SetPoint("LEFT", -30, 0)
+    statusBar.icon:SetSize(30, 30)
+    statusBar.icon:SetAlpha(alpha)
 
     local function callback(timer)
       local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
@@ -132,43 +148,44 @@ local function makeDecreasingStatusBar(id, name)
         return
       end
 
-      local remainingTime = math.floor(aura.expirationTime - GetTime())
-      statusBar.fs:SetText(format("%s: %d s left", name, remainingTime))
-      statusBar:SetValue(remainingTime)
+      local remainingTime = aura.expirationTime - GetTime()
+      statusBar.fs:SetText(format(formatString, name, remainingTime))
+      statusBar:SetValue(remainingTime * 10)
     end
 
-    local statusMin, statusMax = statusBar:GetMinMaxValues()
-    print(format("statusMin = %d, statusMax = %d", statusMin, statusMax))
     statusBar:Show()
-    C_Timer.NewTicker(1, callback)
+    C_Timer.NewTicker(0.5, callback)
   end
 
   return expiration
 end
 
-local CloudburstHealing = "CloudburstHealing"
-local cbFormatString = "%d k heal"
-
 local function makeStatusBar(id)
   local expiration = {}
+  local formatString = "%d k heal"
+  local alpha = 0.5
   expiration.makeCallback = function (auraData)
-    local statusBar = _G[CloudburstHealing] or CreateFrame("StatusBar", CloudburstHealing, UIParent)
+    local statusBar = _G["CloudburstHealing"] or CreateFrame("StatusBar", "CloudburstHealing", UIParent)
     -- statusBar:SetBackdrop(BACKDROP_ACHIEVEMENTS_0_64) BackdropTemplate , "AnimatedStatusBarTemplate"
     statusBar:SetPoint("CENTER")
     statusBar:SetSize(100, 30)
     statusBar:SetMinMaxValues(0, 500)
-    --statusBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
-    local statusMin, statusMax = statusBar:GetMinMaxValues()
-    print(format("statusMin = %d, statusMax = %d", statusMin, statusMax))
+
     statusBar.fs = statusBar.fs or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     statusBar.fs:SetPoint("CENTER")
-    statusBar.fs:SetText(format(cbFormatString, 0))
+    statusBar.fs:SetText(format(formatString, 0))
 
     statusBar.texture = statusBar.texture or statusBar:CreateTexture()
-    -- statusBar.texture:SetAllPoints()
-    statusBar.texture:SetColorTexture(127 / 255, 255 / 255, 0, 0.75)
+    statusBar.texture:SetColorTexture(rgb(127, 255, 0, alpha))
     statusBar:SetStatusBarTexture(statusBar.texture)
     statusBar:SetValue(0)
+
+    local icon = select(8, GetSpellInfo(id))
+    statusBar.icon = statusBar.icon or statusBar:CreateTexture()
+    statusBar.icon:SetTexture(icon)
+    statusBar.icon:SetPoint("LEFT", -30, 0)
+    statusBar.icon:SetSize(30, 30)
+    statusBar.icon:SetAlpha(alpha)
 
     local function callback(timer)
       local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
@@ -181,8 +198,44 @@ local function makeStatusBar(id)
   
       local collected = math.floor((aura.points[1] or 0) / 1000)
       statusBar:SetValue(collected)
-      statusBar.fs:SetText(format(cbFormatString, collected))
+      statusBar.fs:SetText(format(formatString, collected))
     end
+
+    C_Timer.NewTicker(1, callback)
+  end
+
+  return expiration
+end
+
+local function makeMistBar(id)
+  local expiration = {}
+  local function extractName(name)
+    local name = string.match(name, "%((.+)%)")
+    return name
+  end
+  local formatString = "%s currently!"
+  expiration.makeCallback = function (auraData)
+    local statusBar = _G["MistFrame"..id] or CreateFrame("Frame", "MistFrame"..id, UIParent)
+    statusBar:SetPoint("CENTER", 0, -60)
+    statusBar:SetSize(200, 30)
+    statusBar.fs = statusBar.fs or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    statusBar.fs:SetPoint("CENTER")
+    statusBar.fs:SetText(format(formatString, extractName(auraData.name)))
+
+    statusBar.texture = statusBar.texture or statusBar:CreateTexture()
+    statusBar.texture:SetColorTexture(rgb(0, 255, 94, 0.5))
+
+    local function callback(timer)
+      local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+      if not aura then
+        statusBar:Hide()
+        timer:Cancel()
+        return
+      end
+
+      statusBar.fs:SetText(format(formatString, extractName(auraData.name)))
+    end
+    statusBar:Show()
 
     C_Timer.NewTicker(1, callback)
   end
@@ -198,7 +251,9 @@ local expirations = {
   -- prot
   [171249] = { makeDecreasingStatusBar(171249, "prot") },
   -- speed
-  [171250] = { makeRepeatingExpiration(171250, 5, not true) }
+  [171250] = { makeDecreasingStatusBar(171250, "speed") },
+  [197916] = { makeMistBar(197916) },
+  [197919] = { makeMistBar(197919) }
 }
 local aurasMeta = {
   __index = function (self, auraInstanceID)
@@ -272,12 +327,12 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
       end
     end
   end
- 
+
   if updateInfo.updatedAuraInstanceIDs and next(updateInfo.updatedAuraInstanceIDs) then
     for _, auraInstanceID in ipairs(updateInfo.updatedAuraInstanceIDs) do
     end
   end
- 
+
   if updateInfo.removedAuraInstanceIDs and next(updateInfo.removedAuraInstanceIDs) then
     for _, auraInstanceID in ipairs(updateInfo.removedAuraInstanceIDs) do
       if auras[auraInstanceID] then
