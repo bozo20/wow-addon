@@ -1,7 +1,7 @@
 local myAddonName, ns = ...
 
 local DEFAULTS = { inferno = { active = true, debug = true },
-                   auras = { active = true, debug = true } }
+                   auras = { active = true, debug = true, expirations = true } }
 
 local function initDB()
   AshranUtilitiesDB = AshranUtilitiesDB or {}
@@ -54,8 +54,11 @@ function AddonOptions:Initialize()
   local auras_debug = self:CreateCheckbox("auras", "debug", "Auras debug", self.panel_main)
   auras_debug:SetPoint("TOPLEFT", auras_active, 0, -30)
 
+  local auras_expirations = self:CreateCheckbox("auras", "expirations", "Auras expirations", self.panel_main)
+  auras_expirations:SetPoint("TOPLEFT", auras_debug, 0, -30)
+
   local inferno_active = self:CreateCheckbox("inferno", "active", "Inferno announce", self.panel_main)
-  inferno_active:SetPoint("TOPLEFT", auras_debug, 0, -30)
+  inferno_active:SetPoint("TOPLEFT", auras_expirations, 0, -30)
 
   local inferno_debug = self:CreateCheckbox("inferno", "debug", "Inferno debug", self.panel_main)
   inferno_debug:SetPoint("TOPLEFT", inferno_active, 0, -30)

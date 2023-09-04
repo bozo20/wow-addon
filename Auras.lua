@@ -8,6 +8,10 @@ local function isDebug()
   return ns.AddonOptions.db.auras.debug
 end
 
+local function isExpirations()
+  return ns.AddonOptions.db.auras.expirations
+end
+
 local function debugPrint(message)
   if not isDebug() then return end
 
@@ -108,17 +112,18 @@ local function makeRepeatingExpiration(id, after, announce)
   return expiration
 end
 
-local function makeDecreasingStatusBar(id, name)
+local function makeDecreasingStatusBar(id, name, offset)
   local expiration = {}
   local formatString = "%s: %.1f s left"
   local alpha = 0.5
+  local offset = offset or 0
   expiration.makeCallback = function (auraData)
     local remainingTime = auraData.expirationTime - GetTime()
     local maxValue = remainingTime * 10
     local name = name or auraData.name
 
     local statusBar = _G["DecreasingStatusBar"] or CreateFrame("StatusBar", "DecreasingStatusBar", UIParent)
-    statusBar:SetPoint("CENTER", 0, -30)
+    statusBar:SetPoint("CENTER", 0, -30 + offset)
     -- statusBar:SetReverseFill(not true)
     statusBar:SetSize(100, 30)
     statusBar:SetMinMaxValues(0, maxValue)
@@ -163,7 +168,7 @@ end
 local function makeStatusBar(id)
   local expiration = {}
   local formatString = "%d k heal"
-  local alpha = 0.5
+  local alpha = 0.85
   expiration.makeCallback = function (auraData)
     local statusBar = _G["CloudburstHealing"] or CreateFrame("StatusBar", "CloudburstHealing", UIParent)
     -- statusBar:SetBackdrop(BACKDROP_ACHIEVEMENTS_0_64) BackdropTemplate , "AnimatedStatusBarTemplate"
@@ -247,7 +252,7 @@ local expirations = {
   -- cloudburst
   [157504] = { makeOnceExpiration(157504, 10, 15), makeStatusBar(157504) },
   -- Springflut
-  [61295] = { makeDecreasingStatusBar(61295) },
+  [61295] = { makeDecreasingStatusBar(61295, nil, -30) },
   -- prot
   [171249] = { makeDecreasingStatusBar(171249, "prot") },
   -- speed
@@ -320,7 +325,7 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
       end
 
       local list = expirations[auraData.spellId]
-      if list then
+      if list and isExpirations() and unitTarget == "player" then
         for _, expiration in ipairs(list) do
           expiration.makeCallback(auraData)
         end
