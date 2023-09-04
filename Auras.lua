@@ -212,7 +212,7 @@ local function makeStatusBar(id)
   return expiration
 end
 
-local function makeMistBar(id)
+local function makeMistBar(id, colourAsTable)
   local expiration = {}
   local function extractName(name)
     local name = string.match(name, "%((.+)%)")
@@ -228,7 +228,8 @@ local function makeMistBar(id)
     statusBar.fs:SetText(format(formatString, extractName(auraData.name)))
 
     statusBar.texture = statusBar.texture or statusBar:CreateTexture()
-    statusBar.texture:SetColorTexture(rgb(0, 255, 94, 0.5))
+    statusBar.texture:SetColorTexture(unpack(colourAsTable))
+    statusBar.texture:SetAllPoints()
 
     local function callback(timer)
       local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
@@ -257,8 +258,10 @@ local expirations = {
   [171249] = { makeDecreasingStatusBar(171249, "prot") },
   -- speed
   [171250] = { makeDecreasingStatusBar(171250, "speed") },
-  [197916] = { makeMistBar(197916) },
-  [197919] = { makeMistBar(197919) }
+  -- Einhüllender Nebel
+  [197916] = { makeMistBar(197916, { rgb(0, 255, 94, 0.75) }) },
+  -- Beleben
+  [197919] = { makeMistBar(197919, { rgb(255, 215, 0, 0.75) }) }
 }
 local aurasMeta = {
   __index = function (self, auraInstanceID)
