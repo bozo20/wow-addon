@@ -59,7 +59,7 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
 }
 
 local function rgb(r, g, b, a)
-  return r / 255, g / 255, b / 255, a or 0.75
+  return r / 255, g / 255, b / 255, a or 1.0
 end
 
 local function makeOnceExpiration(id, after, total)
@@ -82,7 +82,6 @@ local function makeOnceExpiration(id, after, total)
       local collected = (aura.points[1] or 0) / 1000
       local message = format("%s! %d k healing", aura.name, collected)
       RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
-      --print(message)
     end, total - after)
   end
   expiration.makeCallback = function ()
@@ -115,14 +114,16 @@ end
 local function makeDecreasingStatusBar(id, name, offset)
   local expiration = {}
   local formatString = "%s: %.1f s left"
-  local alpha = 0.5
+  local alpha = 1.0
   local offset = offset or 0
-  expiration.makeCallback = function (auraData)
+
+  expiration.makeCallback = function (auraData, index)
     local remainingTime = auraData.expirationTime - GetTime()
     local maxValue = remainingTime * 10
     local name = name or auraData.name
 
-    local statusBar = _G["DecreasingStatusBar"] or CreateFrame("StatusBar", "DecreasingStatusBar", UIParent)
+    local frameId = "DecreasingStatusBar"..id
+    local statusBar = _G[frameId] or CreateFrame("StatusBar", frameId, UIParent)
     statusBar:SetPoint("CENTER", 0, -30 + offset)
     -- statusBar:SetReverseFill(not true)
     statusBar:SetSize(100, 30)
@@ -152,6 +153,7 @@ local function makeDecreasingStatusBar(id, name, offset)
         timer:Cancel()
         return
       end
+      statusBar:Show()
 
       local remainingTime = aura.expirationTime - GetTime()
       statusBar.fs:SetText(format(formatString, name, remainingTime))
@@ -159,7 +161,7 @@ local function makeDecreasingStatusBar(id, name, offset)
     end
 
     statusBar:Show()
-    C_Timer.NewTicker(0.5, callback)
+    C_Timer.NewTicker(0.05, callback)
   end
 
   return expiration
@@ -168,8 +170,8 @@ end
 local function makeStatusBar(id)
   local expiration = {}
   local formatString = "%d k heal"
-  local alpha = 0.85
-  expiration.makeCallback = function (auraData)
+  local alpha = 1.0
+  expiration.makeCallback = function (auraData, index)
     local statusBar = _G["CloudburstHealing"] or CreateFrame("StatusBar", "CloudburstHealing", UIParent)
     -- statusBar:SetBackdrop(BACKDROP_ACHIEVEMENTS_0_64) BackdropTemplate , "AnimatedStatusBarTemplate"
     statusBar:SetPoint("CENTER")
@@ -206,7 +208,7 @@ local function makeStatusBar(id)
       statusBar.fs:SetText(format(formatString, collected))
     end
 
-    C_Timer.NewTicker(1, callback)
+    C_Timer.NewTicker(0.5, callback)
   end
 
   return expiration
@@ -219,8 +221,10 @@ local function makeMistBar(id, colourAsTable)
     return name
   end
   local formatString = "%s currently!"
-  expiration.makeCallback = function (auraData)
-    local statusBar = _G["MistFrame"..id] or CreateFrame("Frame", "MistFrame"..id, UIParent)
+
+  expiration.makeCallback = function (auraData, index)
+    local frameId = "MistFrame"..id
+    local statusBar = _G[frameId] or CreateFrame("Frame", frameId, UIParent)
     statusBar:SetPoint("CENTER", 0, -60)
     statusBar:SetSize(200, 30)
     statusBar.fs = statusBar.fs or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
@@ -261,7 +265,9 @@ local expirations = {
   -- Einhüllender Nebel
   [197916] = { makeMistBar(197916, { rgb(0, 255, 94, 0.75) }) },
   -- Beleben
-  [197919] = { makeMistBar(197919, { rgb(255, 215, 0, 0.75) }) }
+  [197919] = { makeMistBar(197919, { rgb(255, 215, 0, 0.75) }) },
+  -- Manatee
+  [197908] = { makeDecreasingStatusBar(197908, nil, -30) }
 }
 local aurasMeta = {
   __index = function (self, auraInstanceID)
@@ -329,8 +335,8 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
 
       local list = expirations[auraData.spellId]
       if list and isExpirations() and unitTarget == "player" then
-        for _, expiration in ipairs(list) do
-          expiration.makeCallback(auraData)
+        for index, expiration in ipairs(list) do
+          expiration.makeCallback(auraData, index)
         end
       end
     end
