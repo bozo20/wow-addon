@@ -115,7 +115,7 @@ SLASH_AU_MOUNT1 = "/aumount"
 SlashCmdList["AU_MOUNT"] = function (message, editBox)
   readMounts()
 
-  print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
+  -- print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
   if message == "info" then
     mounts:debug()
   elseif IsAltKeyDown() then
