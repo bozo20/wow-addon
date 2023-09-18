@@ -1,7 +1,8 @@
 local myAddonName, ns = ...
 
 local DEFAULTS = { inferno = { active = true, debug = true },
-                   auras = { active = true, debug = true, expirations = true } }
+                   auras = { active = true, debug = true, expirations = true },
+                   mounts = { debug = true } }
 
 local function initDB()
   AshranUtilitiesDB = AshranUtilitiesDB or {}
@@ -10,6 +11,10 @@ end
 local AddonOptions = CreateFrame("Frame")
 
 ns.AddonOptions = AddonOptions
+
+function ns.print(message, red, green, blue)
+  DEFAULT_CHAT_FRAME:AddMessage(message, red or 1.0, green or 1.0, blue or 1.0)
+end
 
 function AddonOptions:CreateCheckbox(id, option, label, parent, updateFunc)
   local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
@@ -63,8 +68,11 @@ function AddonOptions:Initialize()
   local inferno_debug = self:CreateCheckbox("inferno", "debug", "Inferno debug", self.panel_main)
   inferno_debug:SetPoint("TOPLEFT", inferno_active, 0, -30)
 
+  local mounts_debug = self:CreateCheckbox("mounts", "debug", "Mounts debug", self.panel_main)
+  mounts_debug:SetPoint("TOPLEFT", inferno_debug, 0, -30)
+
   local auras_reset = CreateFrame("Button", nil, self.panel_main, "UIPanelButtonTemplate")
-  auras_reset:SetPoint("TOPLEFT", inferno_debug, 0, -40)
+  auras_reset:SetPoint("TOPLEFT", mounts_debug, 0, -40)
   auras_reset:SetText(RESET)
   auras_reset:SetWidth(100)
   auras_reset:SetScript("OnClick", function ()

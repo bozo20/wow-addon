@@ -8,14 +8,14 @@ local function isDebug()
   return ns.AddonOptions.db.auras.debug
 end
 
-local function isExpirations()
+local function isExpirationsActive()
   return ns.AddonOptions.db.auras.expirations
 end
 
-local function debugPrint(message)
+local function debugPrint(message, ...)
   if not isDebug() then return end
 
-  print(message)
+  ns.print("Auras: "..message, ...)
 end
 
 local f = CreateFrame("Frame")
@@ -58,7 +58,7 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 [61295] = makeBuff(false, "Springflut", nil, false, 116411)
 }
 
-local function rgb(r, g, b, a)
+function ns.rgb(r, g, b, a)
   return r / 255, g / 255, b / 255, a or 1.0
 end
 
@@ -130,7 +130,7 @@ local function makeDecreasingStatusBar(id, name, offset)
     statusBar:SetMinMaxValues(0, maxValue)
 
     statusBar.texture = statusBar.texture or statusBar:CreateTexture()
-    statusBar.texture:SetColorTexture(rgb(0, 217, 255, alpha))
+    statusBar.texture:SetColorTexture(ns.rgb(0, 217, 255, alpha))
     statusBar:SetStatusBarTexture(statusBar.texture)
 
     statusBar:SetValue(maxValue)
@@ -183,7 +183,7 @@ local function makeStatusBar(id)
     statusBar.fs:SetText(format(formatString, 0))
 
     statusBar.texture = statusBar.texture or statusBar:CreateTexture()
-    statusBar.texture:SetColorTexture(rgb(127, 255, 0, alpha))
+    statusBar.texture:SetColorTexture(ns.rgb(127, 255, 0, alpha))
     statusBar:SetStatusBarTexture(statusBar.texture)
     statusBar:SetValue(0)
 
@@ -208,6 +208,7 @@ local function makeStatusBar(id)
       statusBar.fs:SetText(format(formatString, collected))
     end
 
+    statusBar:Show()
     C_Timer.NewTicker(0.5, callback)
   end
 
@@ -242,11 +243,12 @@ local function makeMistBar(id, colourAsTable)
         timer:Cancel()
         return
       end
+      statusBar:Show()
 
       statusBar.fs:SetText(format(formatString, extractName(auraData.name)))
     end
-    statusBar:Show()
 
+    statusBar:Show()
     C_Timer.NewTicker(1, callback)
   end
 
@@ -263,25 +265,30 @@ local expirations = {
   -- speed
   [171250] = { makeDecreasingStatusBar(171250, "speed") },
   -- Einhüllender Nebel
-  [197916] = { makeMistBar(197916, { rgb(0, 255, 94, 0.75) }) },
+  [197916] = { makeMistBar(197916, { ns.rgb(0, 255, 94, 0.75) }) },
   -- Beleben
-  [197919] = { makeMistBar(197919, { rgb(255, 215, 0, 0.75) }) },
+  [197919] = { makeMistBar(197919, { ns.rgb(255, 215, 0, 0.75) }) },
   -- Manatee
   [197908] = { makeDecreasingStatusBar(197908, nil, -30) }
 }
-local aurasMeta = {
-  __index = function (self, auraInstanceID)
-    return self.store[auraInstanceID]
-  end,
-  __newindex = function (self, auraInstanceID, pair)
-    self.store[auraInstanceID] = self.store[auraInstanceID] or {}
-    table.insert(self.store[auraInstanceID], pair)
-  end,
-  __call = function (self, auraInstanceID)
-    return table.remove(self.store[auraInstanceID], 1)
-  end
-}
-local auras = setmetatable({ store = {}, debug = false }, aurasMeta)
+
+
+local auras = { store = {} }
+do
+  local aurasMeta = {
+    __index = function (self, auraInstanceID)
+      return self.store[auraInstanceID]
+    end,
+    __newindex = function (self, auraInstanceID, pair)
+      self.store[auraInstanceID] = self.store[auraInstanceID] or {}
+      table.insert(self.store[auraInstanceID], pair)
+    end,
+    __call = function (self, auraInstanceID)
+      return table.remove(self.store[auraInstanceID], 1)
+    end
+  }
+  setmetatable(auras, aurasMeta)
+end
 
 -- /auaura
 SLASH_AU_AURA1 = "/auau"
@@ -296,7 +303,7 @@ SlashCmdList["AU_AURA"] = function (message, _editBox)
 end
 
 local function debugAura(unitTarget, auraData)
-  print(format("LOCAL: %s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId, auraData.auraInstanceID))
+  debugPrint(format("%s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId, auraData.auraInstanceID))
 end
 
 function f:UNIT_AURA(event, unitTarget, updateInfo)
@@ -326,17 +333,19 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
             local name, server = UnitName(unitTarget)
             SendChatMessage(message, "SAY")
-            debugPrint("LOCAL: "..message)
+            debugPrint(message)
           end
         end
 
-        debugPrint(format("LOCAL: %s, track? %s", message, tostring(buff.track)))
+        debugPrint(format("%s, track? %s", message, tostring(buff.track)), ns.hex2rgb("2efffa"))
       end
 
-      local list = expirations[auraData.spellId]
-      if list and isExpirations() and unitTarget == "player" then
-        for index, expiration in ipairs(list) do
-          expiration.makeCallback(auraData, index)
+      if isExpirationsActive() then
+        local list = expirations[auraData.spellId]
+        if list and unitTarget == "player" then
+          for index, expiration in ipairs(list) do
+            expiration.makeCallback(auraData, index)
+          end
         end
       end
     end
@@ -361,10 +370,10 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
             local name, server = UnitName(unitTarget)
             SendChatMessage(message, "SAY")
-            debugPrint("LOCAL: "..message)
+            debugPrint(message)
           end
         end
-        debugPrint(format("LOCAL: %s by %s expired", buff.name, source))
+        debugPrint(format("%s by %s expired", buff.name, source), ns.hex2rgb("eb7cd9"))
       end
     end
   end
