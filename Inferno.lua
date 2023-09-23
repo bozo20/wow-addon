@@ -19,7 +19,7 @@ local f = CreateFrame("Frame")
 function f:OnEvent(event, ...)
   if not isActive() then return end
 
-  self[event](self, event, ...)
+  ns.wrap(self[event], self, event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
@@ -86,8 +86,10 @@ end
 SLASH_AU_AA1 = "/auaa"
 
 SlashCmdList["AU_AA"] = function (message, _editBox)
-  local b = isInfernoSpawned()
-  print(format("inferno spawned? %s ashran.inferno = %s", tostring(b), tostring(ashran.inferno)))
+  ns.wrap(function ()
+    local b = isInfernoSpawned()
+    print(format("inferno spawned? %s ashran.inferno = %s", tostring(b), tostring(ashran.inferno)))
+  end)
 end
 
 f:RegisterEvent("ADDON_LOADED")

@@ -34,7 +34,7 @@ end
 function f:OnEvent(event, ...)
   if not isActive() then return end
 
-  self[event](self, event, ...)
+  ns.wrap(self[event], self, event, ...)
 end
 
 local function makeBuff(track, name, channel, banner, itemID)

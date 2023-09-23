@@ -13,7 +13,8 @@ local AddonOptions = CreateFrame("Frame")
 ns.AddonOptions = AddonOptions
 
 function ns.print(message, red, green, blue)
-  DEFAULT_CHAT_FRAME:AddMessage(message, red or 1.0, green or 1.0, blue or 1.0)
+  local prefix = "  > "
+  DEFAULT_CHAT_FRAME:AddMessage(prefix..message, red or 1.0, green or 1.0, blue or 1.0)
 end
 
 function AddonOptions:CreateCheckbox(id, option, label, parent, updateFunc)
@@ -100,8 +101,15 @@ end
 
 local f = CreateFrame("Frame")
 
+function ns.wrap(func, ...)
+  local ok, message = pcall(func, ...)
+  if not ok then
+    print(format("Error: %s", message))
+  end
+end
+
 function f:OnEvent(event, ...)
-	self[event](self, event, ...)
+	ns.wrap(self[event], self, event, ...)
 end
 
 function f:ADDON_LOADED(event, addOnName)
@@ -109,89 +117,6 @@ function f:ADDON_LOADED(event, addOnName)
     print(format("Hello %s! AshranUtils.lua loaded.", UnitName("player")))
     initDB()
     AddonOptions:Initialize()
-  end
-end
-
--- name of item as it would appear in CHAT_MSG_LOOT = internal identifier
-local items = { ["Rolle des Schutzes"] = "prot",
-                ["Zauberstab der arkanen Gefangenschaft"] = "prison",
-                ["Frostwyrmei"] = "egg",
-                ["Nesingwarys verlorenes Horn"] = "horn",
-                ["Beschwörungsschriftrolle für Yu'lon, die Jadeschlange"] = "yulon" }
--- debug
-items["Wolliger Bergpelz"] = "Bergpelz"
-items["gespaltener Huf"] = "Huf"
-items["Bestienauge"] = "Bestienauge"
-
-local ids = (function ()
-  local t = {}
-  for _k, v in pairs(items) do
-    t[v] = true
-  end
-
-  return t
-end)()
-
-local playerLootMeta = {
-  __call = function (self, text, playerName)
-    for name, id in pairs(items) do
-      if string.find(text, name) then
-        local m = text:match("x(%d)") or 1
-        local amount = tonumber(m, 10)
-        self[playerName] = { id, amount }
-      end
-    end
-  end,
-  __newindex = function (self, playerName, args)
-    local id, amount = unpack(args)
-    local data = self.store[playerName] or {}
-    data[id] = (data[id] or 0) + amount
-    self.store[playerName] = data
-  end
-}
-local playerLoot = setmetatable({ track = true, store = {}, debug = not true }, playerLootMeta)
-
-function f:CHAT_MSG_LOOT(event, text, playerName, languageName, channelName, playerName2, specialFlags, zoneChannelID, channelIndex, channelBaseName, languageID, lineID, guid, bnSenderID, isMobile, isSubtitle, hideSenderInLetterbox, supressRaidIcons)
-  if not playerLoot.track then return end
-
-  playerLoot(text, playerName)
-end
-
--- /auloot = show whole store
--- /auloot on = 
--- /auloot off = off
--- /auloot ids = show all tracked ids
--- /auloot $id = show who looted $id
-SLASH_AU_LOOT1 = "/auloot"
-
-SlashCmdList["AU_LOOT"] = function (message, _editBox)
-  if message == "" then
-    print(format("dump loot, track? %s", tostring(playerLoot.track)))
-    DevTools_Dump(playerLoot.store)
-  elseif message == "on" then
-    playerLoot.track = true
-    print(format("turned on: %s", tostring(playerLoot.track)))
-  elseif message == "off" then
-    playerLoot.track = false
-    print(format("turned off: %s", tostring(playerLoot.track)))
-  elseif message == "ids" then
-    print("dump ids")
-    DevTools_Dump(ids)
-  elseif not ids[message] then
-    print(format("unknown item id %s", message))
-  else
-    local total = 0
-    for playerName, data in pairs(playerLoot.store) do
-      local amount = data[message]
-      if amount > 0 then
-        print(format("%s had looted %d of %s", playerName, amount, message))
-        if UnitInBattleground("player") then
-          SendChatMessage(format("%s %d %s", playerName, amount, message), "SAY")
-        end
-        total = total + amount
-      end
-    end
-    print(format("total for %s = %d", message, amount))
   end
 end
 
@@ -387,7 +312,11 @@ SlashCmdList["AU_POI"] = function (message, _editBox)
   end
 end
 
+function AshranUtils_CompartmentFunc()
+  -- InterfaceOptionsFrame_OpenToCategory(AddonOptions.panel_main)
+  print("compartment function, ")
+end
+
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("CHAT_MSG_MONSTER_YELL")
-f:RegisterEvent("CHAT_MSG_LOOT")
 f:SetScript("OnEvent", f.OnEvent)

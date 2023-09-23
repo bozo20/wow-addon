@@ -7,7 +7,7 @@ end
 local f = CreateFrame("Frame")
 
 function f:OnEvent(event, ...)
-	self[event](self, event, ...)
+	ns.wrap(self[event], self, event, ...)
 end
 
 
@@ -66,12 +66,11 @@ local function makeIsMapFunction(targetMapID)
     if mapID == targetMapID then return true end
 
     while mapInfo.mapID ~= targetMapID or mapInfo.parentMapID ~= 0 do
-      print("in step")
       mapInfo = C_Map.GetMapInfo(mapInfo.parentMapID)
       if not mapInfo then return false end
       if mapInfo.mapID == targetMapID then return true end
     end
-    print("fell through")
+
     return false
   end
 end
@@ -108,22 +107,24 @@ do
 
         local max = #mounts
         local randomIndex = math.random(max)
-        local mountID, name
+        local mountID, name, mountCreatureDisplayInfoLink
         local skipped = 0
         for i = randomIndex, randomIndex + max do
           local index = i % (max + 1)
           index = math.max(index, 1)
           mountID, name = unpack(mounts[index])
           local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
+          mountCreatureDisplayInfoLink = C_MountJournal.GetMountLink(spellID)
           if isActive then
             isUsable = false
           end
           if isUsable then break end
 
-          print(format("skipped: %s (id = %d, typeID = %d)", name, mountID, mountTypeID))
+          ns.print(format("skipped: %s (id = %d, typeID = %d)", name, mountID, mountTypeID))
           skipped = skipped + 1
         end
-        ns.print(format("summoning %s (%s, start: %d, skipped: %d)", name, type, randomIndex, skipped), colours(type))
+        
+        ns.print(format("summoning %s (%s, start: %d, skipped: %d)", mountCreatureDisplayInfoLink, type, randomIndex, skipped), colours(type))
         C_MountJournal.SummonByID(mountID)
       end,
       lists = {
@@ -186,57 +187,29 @@ end
 SLASH_AU_MOUNT1 = "/aumount"
 
 SlashCmdList["AU_MOUNT"] = function (message, editBox)
-  readMounts()
+  ns.wrap(function ()
+    readMounts()
 
-  if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
-  if IsSwimming() or message == "swimming" then mounts:random("swimming") return end
+    if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
+    if IsSwimming() or message == "swimming" then mounts:random("swimming") return end
 
-  -- print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
-  if message == "info" then
-    ns.print("Mounts info:")
-    mounts:debug()
---[[
-    print(format("Vashj'ir? %s", tostring(isVashjir())))
-    print(format("Ahn'Qiraj? %s", tostring(isAhnQiraj())))
-    local mountTypes = {}
-    for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
-      local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
-      if isCollected and mounts:isFactionUsable(isFactionSpecific, faction) then
-        local creatureDisplayInfoID, description, source, isSelfMount, mountTypeID, uiModelSceneID, animID, spellVisualKitID, disablePlayerMountPreview = C_MountJournal.GetMountInfoExtraByID(mountID)
-        mountTypes[mountTypeID] = mountTypes[mountTypeID] or {}
-        table.insert(mountTypes[mountTypeID], mountID)
-
-        if isActive then
-          print(format("mounted on %s (%d, type: %d)", name, mountID, mountTypeID))
-        end
-      end
+    -- print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
+    if message == "info" then
+      ns.print("Mounts info:")
+      mounts:debug()
+    elseif IsAltKeyDown() or UnitInBattleground("player") then
+      mounts:random("ground")
+    elseif IsShiftKeyDown() then
+      ns.print("Dismount!", colours("dismount"))
+      Dismount()
+    elseif IsControlKeyDown() then
+      mounts:random("flying")
+    elseif IsAdvancedFlyableArea() then
+      mounts:random("advflying")
+    else
+      mounts:random("flying")
     end
-    local mountTypeIDs = {}
-    for mountTypeID, mounts in pairs(mountTypes) do
-      table.insert(mountTypeIDs, mountTypeID)
-      -- print(format("mountTypeID %d: #mounts = %d", mountTypeID, #mounts))
-    end
-    table.sort(mountTypeIDs)
-    for _, mountTypeID in ipairs(mountTypeIDs) do
-      local mounts = mountTypes[mountTypeID]
-      print(format("mountTypeID %d: #mounts = %d", mountTypeID, #mounts))
-      if #mounts < 10 then
-        print(format("  mountIDs = %s", table.concat(mounts, ", ")))
-      end
-    end
---]]
-  elseif IsAltKeyDown() then
-    mounts:random("ground")
-  elseif IsShiftKeyDown() then
-    ns.print("Dismount!", colours("dismount"))
-    Dismount()
-  elseif IsControlKeyDown() then
-    mounts:random("flying")
-  elseif IsAdvancedFlyableArea() then
-    mounts:random("advflying")
-  else
-    mounts:random("flying")
-  end
+  end)
 end
 
 f:RegisterEvent("ADDON_LOADED")

@@ -4,8 +4,10 @@
 ## SavedVariables: AshranUtilitiesDB
 ## Notes: Ashran utilities
 ## Author: Soogioh
+## AddonCompartmentFunc: AshranUtils_CompartmentFunc
 
 AshranUtils.lua
 Auras.lua
 Inferno.lua
 Mounts.lua
+Loot.lua
