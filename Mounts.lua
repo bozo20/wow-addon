@@ -103,7 +103,8 @@ do
 
         return factionMap[englishFaction] == faction
       end,
-      random = function (self, type)
+      random = function (self, type, predicateFunc)
+        predicateFunc = predicateFunc or function () return true end
         local mounts = self.lists[type]
 
         local max = #mounts
@@ -119,10 +120,15 @@ do
           if isActive then
             isUsable = false
           end
+
+          local matchesPredicate = predicateFunc(name, spellID)          
+          isUsable = isUsable and predicateFunc(name, spellID)
           if isUsable then break end
 
-          ns.print(format("skipped: %s (id = %d, typeID = %d)", name, mountID, mountTypeID))
-          skipped = skipped + 1
+          if matchesPredicate then
+            ns.print(format("skipped: %s (id = %d, typeID = %d)", name, mountID, mountTypeID))
+            skipped = skipped + 1
+          end
         end
         
         ns.print(format("summoning %s (%s, start: %d, skipped: %d)", mountCreatureDisplayInfoLink, type, randomIndex, skipped), colours(type))
@@ -239,14 +245,13 @@ local function makeActionButton(index, f, icon, clickFunc)
     if clickFunc then clickFunc() end
   end
   actionButton:SetScript("OnClick", clickButton)
-  actionButton:SetPoint("LEFT", 10 + 40 * (index - 1), -20)
+  actionButton:SetPoint("BOTTOMLEFT", 10 + 40 * (index - 1), 10)
   actionButton:SetSize(40, 40)
-  return actionButton
 end
 
 local function makeButtons(f)
   for i, button in ipairs(buttons) do
-    local actionButton = makeActionButton(i, f, button.icon, button.func)  
+    makeActionButton(i, f, button.icon, button.func)  
   end
 end
 
@@ -258,6 +263,32 @@ function f:ADDON_LOADED(event, addOnName)
     table.insert(ns.DraggableFrame.buttons, makeButtons)
   end
 end
+
+
+ns.Mounts = {
+  search = function (term)
+    local results = {}
+    if term == "" then return results end
+
+    local pattern = format("%s", term)
+    for key, list in pairs(mounts.lists) do
+      for _, entry in ipairs(list) do
+        if string.find(string.lower(entry[2]), string.lower(pattern)) then
+          table.insert(results, format("id: %d, name: %s", entry[1], entry[2]))
+        end
+      end
+    end
+
+    return results
+  end,
+  filtered = function (term)
+    ns.print(format("filtered: trying %q", term))
+    local function byName(name, spellID)
+      return string.find(string.lower(name), string.lower(term))
+    end
+    mounts:random("ground", byName)
+  end
+}
 
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("MOUNT_JOURNAL_USABILITY_CHANGED")

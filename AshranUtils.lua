@@ -322,8 +322,39 @@ local function savePosition(f)
   if type(relativeTo) ~= "nil" then
     relativeTo = relativeTo:GetName()
   end
-  AshranUtilitiesDB.savedPosition = { point, relativeTo, relativePoint, offsetX, offsetY }
+  AshranUtilitiesDB.savedPosition = {
+    isLocked = f.isLocked,
+    point = { point, relativeTo, relativePoint, offsetX, offsetY }
+  }
 end
+
+
+local function makeRandomBySearchButton(f, clickFunc)
+  local actionButton = CreateFrame("Button", nil, f, "ActionBarButtonTemplate")
+  actionButton:RegisterForClicks("AnyUp")
+
+  local function makeTexture()
+    local texture = actionButton:CreateTexture()
+    texture:SetTexture(456563)
+    return texture
+  end
+
+  actionButton:SetNormalTexture(makeTexture())
+  local pt = makeTexture()
+  pt:SetDesaturation(0.85)
+
+  actionButton:SetPushedTexture(pt)
+  actionButton:SetHighlightTexture(makeTexture())
+
+  local function clickButton()
+    if clickFunc then clickFunc() end
+  end
+
+  actionButton:SetScript("OnClick", clickButton)
+  actionButton:SetPoint("BOTTOMRIGHT", -10, 10)
+  actionButton:SetSize(40, 40)
+end
+
 
 function DraggableFrame.makeDraggableFrame()
   if DraggableFrame.frame then
@@ -334,11 +365,12 @@ function DraggableFrame.makeDraggableFrame()
 
   local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
   DraggableFrame.frame = f
-  if type(AshranUtilitiesDB.savedPosition) == "table" and #AshranUtilitiesDB.savedPosition > 0 then
-    local point, relativeTo, relativePoint, offsetX, offsetY = unpack(AshranUtilitiesDB.savedPosition)
+  if type(AshranUtilitiesDB.savedPosition) == "table" then
+    local point, relativeTo, relativePoint, offsetX, offsetY = unpack(AshranUtilitiesDB.savedPosition.point)
     if type(relativeTo) == "string" then
       relativeTo = _G[relativeTo]
     end
+    f.isLocked = AshranUtilitiesDB.savedPosition.isLocked
     f:SetPoint(point, relativeTo, relativePoint, offsetX, offsetY)
   else
     f:SetPoint("CENTER")
@@ -346,12 +378,14 @@ function DraggableFrame.makeDraggableFrame()
   f:SetSize(200, 200)
   f:SetBackdrop(BACKDROP_TUTORIAL_16_16)
 
-  local mayMove = true
+  f.isLocked = f.isLocked or false
 
   local anchorButton = CreateFrame("CheckButton", nil, f, "InterfaceOptionsCheckButtonTemplate")
   anchorButton:SetPoint("TOPRIGHT", -22, -2.5)
+  anchorButton:SetChecked(f.isLocked)
   anchorButton:HookScript("OnClick", function (self, button, down)
-    mayMove = not self:GetChecked()
+    f.isLocked = self:GetChecked()
+    savePosition(f)
   end)
 
   local closeButton = CreateFrame("Button", nil, f, "FloatingFrameCloseButtonDefaultAnchors")
@@ -359,22 +393,36 @@ function DraggableFrame.makeDraggableFrame()
   closeButton:SetSize(20, 20)
   closeButton:SetScript("OnClick", function(self, button, down)
     if down then f:Hide() end
-    print("Pressed", button, down and "down" or "up")
   end)
   closeButton:RegisterForClicks("AnyDown", "AnyUp")
 
   local textField = CreateFrame("EditBox", nil, f, "SearchBoxTemplate")
   textField:SetPoint("TOPLEFT", 15, -2.5)
   textField:SetSize(100, 30)
+
+  local outputPane = CreateFrame("Frame", nil, f)
+  outputPane:SetSize(100, 60)
+  outputPane:SetPoint("TOP", textField, 0, -40)
+  outputPane.outputFS = outputPane.outputFS or outputPane:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+  outputPane.outputFS:SetPoint("TOPLEFT", outputPane)
+  outputPane.outputFS:SetText("")
+
   textField:SetScript("OnEnterPressed", function (self)
-    --
+    if ns.Mounts then
+      local results = ns.Mounts.search(self:GetText())
+      outputPane.outputFS:SetText(table.concat(results, "\n"))
+    end
+  end)
+
+  makeRandomBySearchButton(f, function ()
+    ns.Mounts.filtered(textField:GetText())
   end)
 
   for _, maker in ipairs(DraggableFrame.buttons) do
     maker(f)
   end
 
-  function reset()
+  local function reset()
     closeButton:SetButtonState("NORMAL")
     textField:SetText("")
     f:SetMovable(true)
@@ -391,13 +439,13 @@ function DraggableFrame.makeDraggableFrame()
   end
   f:SetScript("OnMouseDown", function (self, button)
     -- debugPoint("down")
-    if not mayMove then return end
+    if f.isLocked then return end
 
     self:StartMoving()
   end)
   f:SetScript("OnMouseUp", function (self, button)
     -- debugPoint("up")
-    if not mayMove then return end
+    if f.isLocked then savePosition(f) return end
 
     self:StopMovingOrSizing()
     savePosition(f)
