@@ -11,11 +11,12 @@ function f:OnEvent(event, ...)
 end
 
 
-function ns.hex2rgb(hexString)
+function ns.hex2rgb(hexString, alpha)
   local t = {}
   for component in string.gmatch(hexString, "..") do
     table.insert(t, tonumber(component, 16))
   end
+  table.insert(t, alpha or 1)
   return ns.rgb(unpack(t))
 end
 
@@ -166,12 +167,6 @@ local function readMounts()
   end
 end
 
-function f:ADDON_LOADED(event, addOnName)
-  if addOnName == myAddonName then
-    print(format("Hello %s! Mounts.lua loaded.", UnitName("player")))
-    readMounts()
-  end
-end
 
 function f:MOUNT_JOURNAL_USABILITY_CHANGED(event)
   readMounts()
@@ -189,6 +184,8 @@ SLASH_AU_MOUNT1 = "/aumount"
 SlashCmdList["AU_MOUNT"] = function (message, editBox)
   ns.wrap(function ()
     readMounts()
+
+    if UnitAffectingCombat("player") then ns.print("In combat!", ns.hex2rgb("cf0000")) return end
 
     if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
     if IsSwimming() or message == "swimming" then mounts:random("swimming") return end
@@ -210,6 +207,56 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
       mounts:random("flying")
     end
   end)
+end
+
+
+local buttons = {
+  -- Fossiler Raptor
+  { icon = 456563, func = function () mounts:random("ground") end },
+  -- Argentumhippogryph 
+  { icon = 132265, func = function () mounts:random("flying") end },
+  -- Windgeborener Velocidrache
+  { icon = 4622500, func = function () mounts:random("advflying") end }
+}
+
+local function makeActionButton(index, f, icon, clickFunc)
+  local actionButton = CreateFrame("Button", nil, f, "ActionBarButtonTemplate")
+  actionButton:RegisterForClicks("AnyUp")
+  local function makeTexture()
+    local texture = actionButton:CreateTexture()
+    texture:SetTexture(icon)
+    return texture
+  end
+
+  actionButton:SetNormalTexture(makeTexture())
+  local pt = makeTexture()
+  pt:SetDesaturation(0.85)
+
+  actionButton:SetPushedTexture(pt)
+  actionButton:SetHighlightTexture(makeTexture())
+  local function clickButton()
+    print("clickButton "..index..", type = "..type(clickFunc))
+    if clickFunc then clickFunc() end
+  end
+  actionButton:SetScript("OnClick", clickButton)
+  actionButton:SetPoint("LEFT", 10 + 40 * (index - 1), -20)
+  actionButton:SetSize(40, 40)
+  return actionButton
+end
+
+local function makeButtons(f)
+  for i, button in ipairs(buttons) do
+    local actionButton = makeActionButton(i, f, button.icon, button.func)  
+  end
+end
+
+
+function f:ADDON_LOADED(event, addOnName)
+  if addOnName == myAddonName then
+    print(format("Hello %s! Mounts.lua loaded.", UnitName("player")))
+    readMounts()
+    table.insert(ns.DraggableFrame.buttons, makeButtons)
+  end
 end
 
 f:RegisterEvent("ADDON_LOADED")

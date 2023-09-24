@@ -13,7 +13,7 @@ local AddonOptions = CreateFrame("Frame")
 ns.AddonOptions = AddonOptions
 
 function ns.print(message, red, green, blue)
-  local prefix = "  > "
+  local prefix = "> "
   DEFAULT_CHAT_FRAME:AddMessage(prefix..message, red or 1.0, green or 1.0, blue or 1.0)
 end
 
@@ -32,7 +32,7 @@ function AddonOptions:CreateCheckbox(id, option, label, parent, updateFunc)
   cb:HookScript("OnClick", function (_, btn, down)
     UpdateOption(cb:GetChecked())
   end)
-  EventRegistry:RegisterCallback("AddonOptions.OnReset", function ()
+  EventRegistry:RegisterCallback("AshranUtils.AddonOptions.OnReset", function ()
     UpdateOption(DEFAULTS[id][option])
   end, cb)
 
@@ -79,7 +79,7 @@ function AddonOptions:Initialize()
   auras_reset:SetScript("OnClick", function ()
     AshranUtilitiesDB = CopyTable(DEFAULTS)
     self.db = AshranUtilitiesDB
-    EventRegistry:TriggerEvent("AddonOptions.OnReset")
+    EventRegistry:TriggerEvent("AshranUtils.AddonOptions.OnReset")
   end)
 
   InterfaceOptions_AddCategory(self.panel_main)
@@ -104,7 +104,9 @@ local f = CreateFrame("Frame")
 function ns.wrap(func, ...)
   local ok, message = pcall(func, ...)
   if not ok then
-    print(format("Error: %s", message))
+    ns.print("!!!", ns.hex2rgb("ff0000"))
+    ns.print(format("Error: %s", message), ns.hex2rgb("ff0000"))
+    ns.print("!!!", ns.hex2rgb("ff0000"))
   end
 end
 
@@ -312,9 +314,98 @@ SlashCmdList["AU_POI"] = function (message, _editBox)
   end
 end
 
+local DraggableFrame = { buttons = {} }
+ns.DraggableFrame = DraggableFrame
+
+local function savePosition(f)
+  local point, relativeTo, relativePoint, offsetX, offsetY = f:GetPoint()
+  if type(relativeTo) ~= "nil" then
+    relativeTo = relativeTo:GetName()
+  end
+  AshranUtilitiesDB.savedPosition = { point, relativeTo, relativePoint, offsetX, offsetY }
+end
+
+function DraggableFrame.makeDraggableFrame()
+  if DraggableFrame.frame then
+    EventRegistry:TriggerEvent("AshranUtils.Widget.OnReset")
+    DraggableFrame.frame:Show()
+    return
+  end
+
+  local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  DraggableFrame.frame = f
+  if type(AshranUtilitiesDB.savedPosition) == "table" and #AshranUtilitiesDB.savedPosition > 0 then
+    local point, relativeTo, relativePoint, offsetX, offsetY = unpack(AshranUtilitiesDB.savedPosition)
+    if type(relativeTo) == "string" then
+      relativeTo = _G[relativeTo]
+    end
+    f:SetPoint(point, relativeTo, relativePoint, offsetX, offsetY)
+  else
+    f:SetPoint("CENTER")
+  end
+  f:SetSize(200, 200)
+  f:SetBackdrop(BACKDROP_TUTORIAL_16_16)
+
+  local mayMove = true
+
+  local anchorButton = CreateFrame("CheckButton", nil, f, "InterfaceOptionsCheckButtonTemplate")
+  anchorButton:SetPoint("TOPRIGHT", -22, -2.5)
+  anchorButton:HookScript("OnClick", function (self, button, down)
+    mayMove = not self:GetChecked()
+  end)
+
+  local closeButton = CreateFrame("Button", nil, f, "FloatingFrameCloseButtonDefaultAnchors")
+  closeButton:SetPoint("TOPRIGHT", -5, -5)
+  closeButton:SetSize(20, 20)
+  closeButton:SetScript("OnClick", function(self, button, down)
+    if down then f:Hide() end
+    print("Pressed", button, down and "down" or "up")
+  end)
+  closeButton:RegisterForClicks("AnyDown", "AnyUp")
+
+  local textField = CreateFrame("EditBox", nil, f, "SearchBoxTemplate")
+  textField:SetPoint("TOPLEFT", 15, -2.5)
+  textField:SetSize(100, 30)
+  textField:SetScript("OnEnterPressed", function (self)
+    --
+  end)
+
+  for _, maker in ipairs(DraggableFrame.buttons) do
+    maker(f)
+  end
+
+  function reset()
+    closeButton:SetButtonState("NORMAL")
+    textField:SetText("")
+    f:SetMovable(true)
+  end
+
+  EventRegistry:RegisterCallback("AshranUtils.Widget.OnReset", reset, f)
+  f:SetMovable(true)
+  local function debugPoint(type)
+    local point, relativeTo, relativePoint, offsetX, offsetY = f:GetPoint()
+    print(format("%s: (point = %s, relativePoint = %s) offsetX = %d, offsetY = %d", type, point, relativePoint, offsetX, offsetY))
+    if relativeTo then
+      print(format("name? %s", tostring(relativeTo:GetName())))
+    end
+  end
+  f:SetScript("OnMouseDown", function (self, button)
+    -- debugPoint("down")
+    if not mayMove then return end
+
+    self:StartMoving()
+  end)
+  f:SetScript("OnMouseUp", function (self, button)
+    -- debugPoint("up")
+    if not mayMove then return end
+
+    self:StopMovingOrSizing()
+    savePosition(f)
+  end)
+end
+
 function AshranUtils_CompartmentFunc()
-  -- InterfaceOptionsFrame_OpenToCategory(AddonOptions.panel_main)
-  print("compartment function, ")
+  ns.wrap(DraggableFrame.makeDraggableFrame)
 end
 
 f:RegisterEvent("ADDON_LOADED")

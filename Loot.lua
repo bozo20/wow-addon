@@ -55,7 +55,7 @@ do
             ns.print(format("  %s got %d", playerName, amount))
             total = total + amount
           end
-          ns.print(format("  %d total", total))
+          ns.print(format("  %d total", total), ns.hex2rgb("FF00FF"))
         end
       end
     },
@@ -91,6 +91,12 @@ function f:CHAT_MSG_LOOT(event, text, playerName, languageName, channelName, pla
   loot(text, playerName)
 end
 
+function f:CHAT_MSG_MONSTER_YELL(event, text, playerName, languageName, channelName, playerName2, specialFlags, zoneChannelID, channelIndex, channelBaseName, languageID, lineID, guid, bnSenderID, isMobile, isSubtitle, hideSenderInLetterbox, supressRaidIcons)
+  if GetRealZoneText() ~= "Ashran" then return end
+
+  ns.print(format("%s said: %s", playerName, text))
+end
+
 -- /auloot = show whole store
 -- /auloot on = 
 -- /auloot off = off
@@ -100,10 +106,10 @@ SLASH_AU_LOOT1 = "/auloot"
 
 SlashCmdList["AU_LOOT"] = function (message, _editBox)
   ns.wrap(function ()
-    if message == "" then
+    if message == "debug" then
       ns.print("Loot debug")
       loot:debug()
-    elseif message == "id" then
+    elseif message == "" then
       loot:debug(true)
     elseif message == "reset" then
       ns.print("Loot reset")
@@ -112,8 +118,13 @@ SlashCmdList["AU_LOOT"] = function (message, _editBox)
   end)
 end
 
+function f:PVP_MATCH_ACTIVE(event)
+  loot:reset()
+end
 
 
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("CHAT_MSG_LOOT")
+f:RegisterEvent("CHAT_MSG_MONSTER_YELL")
+f:RegisterEvent("PVP_MATCH_ACTIVE")
 f:SetScript("OnEvent", f.OnEvent)

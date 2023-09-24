@@ -15,7 +15,7 @@ end
 local function debugPrint(message, ...)
   if not isDebug() then return end
 
-  ns.print("Auras: "..message, ...)
+  ns.print("Auras.Debug: "..message, ...)
 end
 
 local f = CreateFrame("Frame")
@@ -259,7 +259,7 @@ local expirations = {
   -- cloudburst
   [157504] = { makeOnceExpiration(157504, 10, 15), makeStatusBar(157504) },
   -- Springflut
-  [61295] = { makeDecreasingStatusBar(61295, nil, -30) },
+  -- [61295] = { makeDecreasingStatusBar(61295, nil, -30) },
   -- prot
   [171249] = { makeDecreasingStatusBar(171249, "prot") },
   -- speed
@@ -306,6 +306,8 @@ local function debugAura(unitTarget, auraData)
   debugPrint(format("%s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId, auraData.auraInstanceID))
 end
 
+local aurasColour = "eb7cd9"
+
 function f:UNIT_AURA(event, unitTarget, updateInfo)
   if not updateInfo then return end
   if updateInfo.isFullUpdate then return end
@@ -331,13 +333,12 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
             SendChatMessage(message, buff.channel)
           else
             local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
-            local name, server = UnitName(unitTarget)
             SendChatMessage(message, "SAY")
             debugPrint(message)
           end
         end
 
-        debugPrint(format("%s, track? %s", message, tostring(buff.track)), ns.hex2rgb("2efffa"))
+        debugPrint(format("%s, track? %s", message, tostring(buff.track)), ns.hex2rgb(aurasColour))
       end
 
       if isExpirationsActive() then
@@ -360,20 +361,21 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
     for _, auraInstanceID in ipairs(updateInfo.removedAuraInstanceIDs) do
       if auras[auraInstanceID] then
         -- using __call
-        local source, buff = unpack(auras(auraInstanceID))
+        local source, buff = unpack(auras(auraInstanceID) or {})
         if not source or not buff then return end
 
         if buff.track and not buff.banner and UnitInBattleground("player") then
+          local message = format("{rt7} %s expired", buff.name)
           if unitTarget == "player" then
-            SendChatMessage(format("{rt7} %s expired", buff.name), buff.channel)
+            SendChatMessage(message, buff.channel)
           else
-            local message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
-            local name, server = UnitName(unitTarget)
-            SendChatMessage(message, "SAY")
-            debugPrint(message)
+            message = format("%s on %s (%s)", message, UnitName(unitTarget), unitTarget)
+            -- SendChatMessage(message, "SAY")
+            debugPrint(message, ns.hex2rgb(aurasColour))
           end
         end
-        debugPrint(format("%s by %s expired", buff.name, source), ns.hex2rgb("eb7cd9"))
+
+        debugPrint(format("%s by %s expired", buff.name, source), ns.hex2rgb(aurasColour))
       end
     end
   end
