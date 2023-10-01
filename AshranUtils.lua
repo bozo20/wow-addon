@@ -12,9 +12,21 @@ local AddonOptions = CreateFrame("Frame")
 
 ns.AddonOptions = AddonOptions
 
+function ns.log(message)
+  AshranUtilitiesDB.log = AshranUtilitiesDB.log or {}
+  table.insert(AshranUtilitiesDB.log, message)
+end
+
 function ns.print(message, red, green, blue)
   local prefix = "> "
-  DEFAULT_CHAT_FRAME:AddMessage(prefix..message, red or 1.0, green or 1.0, blue or 1.0)
+  DEFAULT_CHAT_FRAME:AddMessage(prefix..message, red or 219 / 255 , green or 171 / 255, blue or 42 / 255)
+end
+
+local function debugErrors()
+  local errors = AshranUtilitiesDB.errors or {}
+  if #errors > 0 then
+    ns.print(format("Logged %d errors.", #errors))
+  end
 end
 
 function AddonOptions:CreateCheckbox(id, option, label, parent, updateFunc)
@@ -107,6 +119,10 @@ function ns.wrap(func, ...)
     ns.print("!!!", ns.hex2rgb("ff0000"))
     ns.print(format("Error: %s", message), ns.hex2rgb("ff0000"))
     ns.print("!!!", ns.hex2rgb("ff0000"))
+    if AshranUtilitiesDB then
+      AshranUtilitiesDB.errors = AshranUtilitiesDB.errors or {}
+      table.insert(AshranUtilitiesDB.errors, message)
+    end
   end
 end
 
@@ -116,8 +132,9 @@ end
 
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
-    print(format("Hello %s! AshranUtils.lua loaded.", UnitName("player")))
+    ns.print("AshranUtils.lua loaded.")
     initDB()
+    debugErrors()
     AddonOptions:Initialize()
   end
 end
@@ -335,7 +352,7 @@ local function makeRandomBySearchButton(f, clickFunc)
 
   local function makeTexture()
     local texture = actionButton:CreateTexture()
-    texture:SetTexture(456563)
+    texture:SetTexture(134400) -- question mark
     return texture
   end
 
@@ -410,7 +427,8 @@ function DraggableFrame.makeDraggableFrame()
   textField:SetScript("OnEnterPressed", function (self)
     if ns.Mounts then
       local results = ns.Mounts.search(self:GetText())
-      outputPane.outputFS:SetText(table.concat(results, "\n"))
+      -- outputPane.outputFS:SetText(table.concat(results, "\n"))
+      outputPane.outputFS:SetText(format("%d results", #results))
     end
   end)
 
@@ -456,6 +474,17 @@ function AshranUtils_CompartmentFunc()
   ns.wrap(DraggableFrame.makeDraggableFrame)
 end
 
+function f:CHAT_MSG_WHISPER(event, text, playerName, languageName, channelName, playerName2, specialFlags, zoneChannelID, channelIndex, channelBaseName, languageID, lineID, guid, bnSenderID, isMobile, isSubtitle, hideSenderInLetterbox, supressRaidIcons)
+  ns.wrap(function ()
+    if string.find(string.lower(text), "enter") then
+      local message = format("%s whispered: %s", playerName, text)
+      -- SendChatMessage(message, "PARTY")
+      ns.print(message)
+    end
+  end)
+end
+
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("CHAT_MSG_MONSTER_YELL")
+f:RegisterEvent("CHAT_MSG_WHISPER")
 f:SetScript("OnEvent", f.OnEvent)

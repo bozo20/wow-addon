@@ -45,7 +45,8 @@ do
       advflying = { ns.hex2rgb("d0d938") },
       flying = { ns.hex2rgb("64ab22") },
       swimming = { ns.hex2rgb("64ab22") },
-      zoned = { ns.hex2rgb("64ab22") }
+      zoned = { ns.hex2rgb("64ab22") },
+      ALL = { ns.hex2rgb("64ab22") }
     },
     __call = function (self, typeOrName)
       local argType = type(typeOrName)
@@ -89,11 +90,25 @@ do
     ["swimming"] = { [231] = true, [407] = true },
     ["zoned"] = { [232] = isVashjir,  [241] = isAhnQiraj }
   }
+
+  -- To shuffle an array a of n elements (indices 0..n-1):
+  -- for i from 0 to n−2 do
+  --      j ← random integer such that i ≤ j < n
+  --      exchange a[i] and a[j]
+  local function shuffle(t)
+    local n = #t
+    for i = 1, n - 3 do
+      local j = math.random(i, n - 1)
+      t[i], t[j] = t[j], t[i]
+    end
+    return t
+  end
+
   local mountsMeta = {
     __index = {
       debug = function (self)
         for mountType, mounts in pairs(self.lists) do
-          print(format("mounts2: #%s = %d", mountType, #mounts))
+          ns.print(format("mounts2: #%s = %d", mountType, #mounts))
         end
       end,
       isFactionUsable = function (self, isFactionSpecific, faction)
@@ -104,8 +119,18 @@ do
         return factionMap[englishFaction] == faction
       end,
       random = function (self, type, predicateFunc)
-        predicateFunc = predicateFunc or function () return true end
         local mounts = self.lists[type]
+
+        if type == "ALL" then
+          local t = {}
+          for k, v in pairs(self.lists) do
+            for i, pair in ipairs(v) do
+              table.insert(t, pair)
+            end
+          end
+
+          mounts = shuffle(t)
+        end
 
         local max = #mounts
         local randomIndex = math.random(max)
@@ -115,14 +140,16 @@ do
           local index = i % (max + 1)
           index = math.max(index, 1)
           mountID, name = unpack(mounts[index])
+
           local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
           mountCreatureDisplayInfoLink = C_MountJournal.GetMountLink(spellID)
-          if isActive then
-            isUsable = false
+          if mountCreatureDisplayInfoLink == nil then
+            mountCreatureDisplayInfoLink = GetSpellLink(spellID)
           end
+          isUsable = not isActive
 
-          local matchesPredicate = predicateFunc(name, spellID)          
-          isUsable = isUsable and predicateFunc(name, spellID)
+          local matchesPredicate = predicateFunc == nil or predicateFunc(name, spellID)
+          isUsable = isUsable and matchesPredicate
           if isUsable then break end
 
           if matchesPredicate then
@@ -130,8 +157,8 @@ do
             skipped = skipped + 1
           end
         end
-        
-        ns.print(format("summoning %s (%s, start: %d, skipped: %d)", mountCreatureDisplayInfoLink, type, randomIndex, skipped), colours(type))
+
+        ns.print(format("summoning %d %s (%s, start: %d, skipped: %d)", mountID, mountCreatureDisplayInfoLink or "no link", tostring(type), randomIndex, skipped), colours(type))
         C_MountJournal.SummonByID(mountID)
       end,
       lists = {
@@ -190,6 +217,21 @@ SLASH_AU_MOUNT1 = "/aumount"
 SlashCmdList["AU_MOUNT"] = function (message, editBox)
   ns.wrap(function ()
     readMounts()
+
+    if message == "debug" then
+      for i, pair in ipairs(mounts.lists.ground) do
+        local mountID, name = unpack(pair)
+        local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
+        local mountCreatureDisplayInfoLink = C_MountJournal.GetMountLink(spellID)
+        if mountCreatureDisplayInfoLink == nil then
+          -- 306423
+          -- /dump C_MountJournal.GetMountLink(306423)
+          ns.print(format("nil link: %d. name = %s, mountID = %d, spellID = %d", i, name, mountID, spellID))
+        end
+      end
+
+      return
+    end
 
     if UnitAffectingCombat("player") then ns.print("In combat!", ns.hex2rgb("cf0000")) return end
 
@@ -258,7 +300,7 @@ end
 
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
-    print(format("Hello %s! Mounts.lua loaded.", UnitName("player")))
+    ns.print("Mounts.lua loaded.")
     readMounts()
     table.insert(ns.DraggableFrame.buttons, makeButtons)
   end
@@ -282,11 +324,17 @@ ns.Mounts = {
     return results
   end,
   filtered = function (term)
-    ns.print(format("filtered: trying %q", term))
-    local function byName(name, spellID)
-      return string.find(string.lower(name), string.lower(term))
-    end
-    mounts:random("ground", byName)
+    ns.wrap(function ()
+      ns.print(format("filtered: trying %q", term))
+      local byName
+      if term ~= "" then
+        byName = function (name, spellID)
+          return string.find(string.lower(name), string.lower(term))
+        end
+      end
+
+      mounts:random("ALL", byName)
+    end)
   end
 }
 

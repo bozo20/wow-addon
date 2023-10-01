@@ -24,7 +24,7 @@ end
 
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
-    print(format("Hello %s! Inferno.lua loaded.", UnitName("player")))
+    ns.print("Inferno.lua loaded.")
   end
 end
 
@@ -88,7 +88,7 @@ SLASH_AU_AA1 = "/auaa"
 SlashCmdList["AU_AA"] = function (message, _editBox)
   ns.wrap(function ()
     local b = isInfernoSpawned()
-    print(format("inferno spawned? %s ashran.inferno = %s", tostring(b), tostring(ashran.inferno)))
+    ns.print(format("inferno spawned? %s ashran.inferno = %s", tostring(b), tostring(ashran.inferno)))
   end)
 end
 

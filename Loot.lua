@@ -8,7 +8,7 @@ end
 
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
-    print(format("Hello %s! Loot.lua loaded.", UnitName("player")))
+    ns.print("Loot.lua loaded.")
   end
 end
 
@@ -85,10 +85,12 @@ do
 end
 
 function f:CHAT_MSG_LOOT(event, text, playerName, languageName, channelName, playerName2, specialFlags, zoneChannelID, channelIndex, channelBaseName, languageID, lineID, guid, bnSenderID, isMobile, isSubtitle, hideSenderInLetterbox, supressRaidIcons)
-  if UnitInBattleground("player") then
-    -- loot(text, playerName)
-  end
-  loot(text, playerName)
+  ns.wrap(function ()
+    if UnitInBattleground("player") then
+      -- loot(text, playerName)
+    end
+    loot(text, playerName)
+  end)
 end
 
 function f:CHAT_MSG_MONSTER_YELL(event, text, playerName, languageName, channelName, playerName2, specialFlags, zoneChannelID, channelIndex, channelBaseName, languageID, lineID, guid, bnSenderID, isMobile, isSubtitle, hideSenderInLetterbox, supressRaidIcons)
@@ -119,7 +121,9 @@ SlashCmdList["AU_LOOT"] = function (message, _editBox)
 end
 
 function f:PVP_MATCH_ACTIVE(event)
-  loot:reset()
+  ns.wrap(function ()
+    loot:reset()
+  end)
 end
 
 

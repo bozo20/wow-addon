@@ -22,12 +22,12 @@ local f = CreateFrame("Frame")
 
 function f:ADDON_LOADED(event, addOnName)
   if addOnName == myAddonName then
-    print(format("Hello %s! Auras.lua loaded.", UnitName("player")))
+    ns.print("Auras.lua loaded.")
   end
 end
 
 f.watchPlayers = function ()
-  f:RegisterUnitEvent("UNIT_AURA", "player", "raid1")
+  f:RegisterUnitEvent("UNIT_AURA", "player")
   -- local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
 end
 
@@ -37,25 +37,27 @@ function f:OnEvent(event, ...)
   ns.wrap(self[event], self, event, ...)
 end
 
-local function makeBuff(track, name, channel, banner, itemID)
-  return { track = track, name = name, channel = channel or "SAY", banner = banner or false, itemID = itemID }
+local function makeBuff(track, name, channel, itemID)
+  return { track = track, name = name, channel = channel or "SAY", itemID = itemID }
 end
 
 local buffs = { --[383648] = makeBuff(false, "Erdschild"),
-                [274834] = makeBuff(false, "phalanx", nil, true),
-                [28418] = makeBuff(true, "General's Warcry 10 %", nil, true),
-                [28419] = makeBuff(true, "General's Warcry 20 %", nil, true),
-                [28420] = makeBuff(true, "General's Warcry 30 %", nil, true),
-                [171250] = makeBuff(true, "scroll of speed", nil, false, 116410),
+                [274834] = makeBuff(false, "phalanx"),
+                [28418] = makeBuff(true, "General's Warcry 10 %"),
+                [28419] = makeBuff(true, "General's Warcry 20 %"),
+                [28420] = makeBuff(true, "General's Warcry 30 %"),
+                [171250] = makeBuff(true, "scroll of speed", nil, 116410),
                 [388035] = makeBuff(false, "Fortitude of the Bear"),
-                [171249] = makeBuff(true, "prot", "INSTANCE_CHAT", false, 116411),
+                [171249] = makeBuff(true, "prot", "INSTANCE_CHAT", 116411),
                 [357650] = makeBuff(false, "mini BL"),
                 [157504] = makeBuff(false, "cloudburst totem"),
                 [197916] = makeBuff(false, "Lebenszyklus (Beleben)"),
                 [197919] = makeBuff(false, "Lebenszyklus (Einhüllender Nebel)"),
+                [193534] = makeBuff(false, "Beständiger Fokus"),
+                [260242] = makeBuff(false, "Präzise Schüsse"),
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
-                [61295] = makeBuff(false, "Springflut", nil, false, 116411)
+                [61295] = makeBuff(false, "Springflut", nil)
 }
 
 function ns.rgb(r, g, b, a)
@@ -256,6 +258,10 @@ local function makeMistBar(id, colourAsTable)
 end
 
 local expirations = {
+  -- Präzise Schüsse
+  [260242] = { makeDecreasingStatusBar(260242, "", -60) },
+  -- Beständiger Fokus
+  [193534] = { makeDecreasingStatusBar(193534, nil, -30) },
   -- cloudburst
   [157504] = { makeOnceExpiration(157504, 10, 15), makeStatusBar(157504) },
   -- Springflut
@@ -303,7 +309,7 @@ SlashCmdList["AU_AURA"] = function (message, _editBox)
 end
 
 local function debugAura(unitTarget, auraData)
-  debugPrint(format("%s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), auraData.sourceUnit, auraData.spellId, auraData.auraInstanceID))
+  debugPrint(format("%s start, target = %s, source = %s, spellId = %s, auraInstanceID = %s", auraData.name, UnitName(unitTarget), tostring(auraData.sourceUnit), auraData.spellId, auraData.auraInstanceID))
 end
 
 local aurasColour = "eb7cd9"
@@ -318,11 +324,11 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
 
       local buff = buffs[auraData.spellId]
       if buff then
-        local source = UnitName(auraData.sourceUnit)
-        if buff.banner then source = 'banner' end
+        local source = auraData.sourceUnit and UnitName(auraData.sourceUnit) or format("fail: %s", auraData.name)
         auras[auraData.auraInstanceID] = { source, buff }
 
         local message = format("%s used %s", source, buff.name)
+        -- ns.log("")
         if buff.track and UnitInBattleground("player") then
           local message = format("{rt4} %s", message)
           if buff.itemID then
@@ -364,7 +370,7 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
         local source, buff = unpack(auras(auraInstanceID) or {})
         if not source or not buff then return end
 
-        if buff.track and not buff.banner and UnitInBattleground("player") then
+        if buff.track and UnitInBattleground("player") then
           local message = format("{rt7} %s expired", buff.name)
           if unitTarget == "player" then
             SendChatMessage(message, buff.channel)
