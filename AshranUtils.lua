@@ -108,7 +108,9 @@ end
 SLASH_AddonOptions1 = "/auui"
 
 SlashCmdList.AddonOptions = function (msg, editBox)
-	InterfaceOptionsFrame_OpenToCategory(AddonOptions.panel_main)
+	ns.wrap(function ()
+    InterfaceOptionsFrame_OpenToCategory(AddonOptions.panel_main)
+  end)
 end
 
 local f = CreateFrame("Frame")
@@ -318,17 +320,19 @@ end
 SLASH_AU_POI1 = "/aupoi"
 
 SlashCmdList["AU_POI"] = function (message, _editBox)
-  local uiMapID = C_Map.GetBestMapForUnit("player")
-  for _, areaPoiID in ipairs(C_AreaPoiInfo.GetAreaPOIForMap(uiMapID)) do
-    local areaPOIInfo = C_AreaPoiInfo.GetAreaPOIInfo(uiMapID, areaPoiID)
-    print(format("poi: %s", areaPOIInfo.name))
-    if C_AreaPoiInfo.IsAreaPOITimed(areaPoiID) then
-      print(format("time left: %d seconds", C_AreaPoiInfo.GetAreaPOISecondsLeft(areaPoiID)))
-    else
-      print("not timed")
-      print(format("time left: %d seconds", C_AreaPoiInfo.GetAreaPOISecondsLeft(areaPoiID)))
+  ns.wrap(function ()
+    local uiMapID = C_Map.GetBestMapForUnit("player")
+    for _, areaPoiID in ipairs(C_AreaPoiInfo.GetAreaPOIForMap(uiMapID)) do
+      local areaPOIInfo = C_AreaPoiInfo.GetAreaPOIInfo(uiMapID, areaPoiID)
+      print(format("poi: %s", areaPOIInfo.name))
+      if C_AreaPoiInfo.IsAreaPOITimed(areaPoiID) then
+        print(format("time left: %d seconds", C_AreaPoiInfo.GetAreaPOISecondsLeft(areaPoiID)))
+      else
+        print("not timed")
+        print(format("time left: %d seconds", C_AreaPoiInfo.GetAreaPOISecondsLeft(areaPoiID)))
+      end
     end
-  end
+  end)
 end
 
 local DraggableFrame = { buttons = {} }
@@ -427,8 +431,13 @@ function DraggableFrame.makeDraggableFrame()
   textField:SetScript("OnEnterPressed", function (self)
     if ns.Mounts then
       local results = ns.Mounts.search(self:GetText())
-      -- outputPane.outputFS:SetText(table.concat(results, "\n"))
       outputPane.outputFS:SetText(format("%d results", #results))
+    end
+    self:ClearFocus()
+  end)
+  textField:SetScript("OnTextSet", function (self)
+    if self:GetText() == "" then
+      outputPane.outputFS:SetText("")
     end
   end)
 

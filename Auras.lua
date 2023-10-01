@@ -53,28 +53,21 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 [157504] = makeBuff(false, "cloudburst totem"),
                 [197916] = makeBuff(false, "Lebenszyklus (Beleben)"),
                 [197919] = makeBuff(false, "Lebenszyklus (Einhüllender Nebel)"),
-                [193534] = makeBuff(false, "Beständiger Fokus"),
-                [260242] = makeBuff(false, "Präzise Schüsse"),
+                --[193534] = makeBuff(false, "Beständiger Fokus"),
+                --[260242] = makeBuff(false, "Präzise Schüsse"),
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
                 --[2645] = { false, "Geisterwolf" },
-                [61295] = makeBuff(false, "Springflut", nil)
+                --[61295] = makeBuff(false, "Springflut", nil)
 }
 
 function ns.rgb(r, g, b, a)
   return r / 255, g / 255, b / 255, a or 1.0
 end
 
-local function makeOnceExpiration(id, after, total)
+local function makeCloudTotemExpiration(id, after, total)
   local expiration = {}
-  local function callback()
-    local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
-    if not aura then return end
-
-    local collected = (aura.points[1] or 0) / 1000
-    local message = format("%s in %d seconds! %d k healing", aura.name, total - after, collected)
-    RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
-    PlaySound(8959)
-    C_Timer.NewTicker(1, function (timer)
+  local function ticker(timer)
+    ns.wrap(function ()
       local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
       if not aura then
         timer:Cancel()
@@ -84,7 +77,19 @@ local function makeOnceExpiration(id, after, total)
       local collected = (aura.points[1] or 0) / 1000
       local message = format("%s! %d k healing", aura.name, collected)
       RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
-    end, total - after)
+    end)
+  end
+  local function callback()
+    ns.wrap(function ()
+      local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+      if not aura then return end
+
+      local collected = (aura.points[1] or 0) / 1000
+      local message = format("%s in %d seconds! %d k healing", aura.name, total - after, collected)
+      RaidNotice_AddMessage(RaidWarningFrame, message, ChatTypeInfo["RAID_WARNING"])
+      PlaySound(8959)
+      C_Timer.NewTicker(1, ticker, total - after)
+    end)
   end
   expiration.makeCallback = function ()
     C_Timer.After(after, callback)
@@ -113,7 +118,8 @@ local function makeRepeatingExpiration(id, after, announce)
   return expiration
 end
 
-local function makeDecreasingStatusBar(id, name, offset)
+
+local function makeDecreasingAuraBar(id, name, offset)
   local expiration = {}
   local formatString = "%s: %.1f s left"
   local alpha = 1.0
@@ -149,17 +155,19 @@ local function makeDecreasingStatusBar(id, name, offset)
     statusBar.icon:SetAlpha(alpha)
 
     local function callback(timer)
-      local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
-      if not aura then
-        statusBar:Hide()
-        timer:Cancel()
-        return
-      end
-      statusBar:Show()
+      ns.wrap(function ()
+        local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+        if not aura then
+          statusBar:Hide()
+          timer:Cancel()
+          return
+        end
+        statusBar:Show()
 
-      local remainingTime = aura.expirationTime - GetTime()
-      statusBar.fs:SetText(format(formatString, name, remainingTime))
-      statusBar:SetValue(remainingTime * 10)
+        local remainingTime = aura.expirationTime - GetTime()
+        statusBar.fs:SetText(format(formatString, name, remainingTime))
+        statusBar:SetValue(remainingTime * 10)
+      end)
     end
 
     statusBar:Show()
@@ -169,7 +177,7 @@ local function makeDecreasingStatusBar(id, name, offset)
   return expiration
 end
 
-local function makeStatusBar(id)
+local function makeCollectingBar(id)
   local expiration = {}
   local formatString = "%d k heal"
   local alpha = 1.0
@@ -197,17 +205,19 @@ local function makeStatusBar(id)
     statusBar.icon:SetAlpha(alpha)
 
     local function callback(timer)
-      local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
-      if not aura then
-        statusBar:Hide()
-        timer:Cancel()
-        return
-      end
-      statusBar:Show()
-  
-      local collected = math.floor((aura.points[1] or 0) / 1000)
-      statusBar:SetValue(collected)
-      statusBar.fs:SetText(format(formatString, collected))
+      ns.wrap(function ()
+        local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+        if not aura then
+          statusBar:Hide()
+          timer:Cancel()
+          return
+        end
+        statusBar:Show()
+
+        local collected = math.floor((aura.points[1] or 0) / 1000)
+        statusBar:SetValue(collected)
+        statusBar.fs:SetText(format(formatString, collected))
+      end)
     end
 
     statusBar:Show()
@@ -259,23 +269,23 @@ end
 
 local expirations = {
   -- Präzise Schüsse
-  [260242] = { makeDecreasingStatusBar(260242, "", -60) },
+  [260242] = { makeDecreasingAuraBar(260242, "", -60) },
   -- Beständiger Fokus
-  [193534] = { makeDecreasingStatusBar(193534, nil, -30) },
+  [193534] = { makeDecreasingAuraBar(193534, "", -30) },
   -- cloudburst
-  [157504] = { makeOnceExpiration(157504, 10, 15), makeStatusBar(157504) },
+  [157504] = { makeCloudTotemExpiration(157504, 10, 15), makeCollectingBar(157504) },
   -- Springflut
-  -- [61295] = { makeDecreasingStatusBar(61295, nil, -30) },
+  -- [61295] = { makeDecreasingAuraBar(61295, nil, -30) },
   -- prot
-  [171249] = { makeDecreasingStatusBar(171249, "prot") },
+  [171249] = { makeDecreasingAuraBar(171249, "prot") },
   -- speed
-  [171250] = { makeDecreasingStatusBar(171250, "speed") },
+  [171250] = { makeDecreasingAuraBar(171250, "speed") },
   -- Einhüllender Nebel
-  [197916] = { makeMistBar(197916, { ns.rgb(0, 255, 94, 0.75) }) },
+  --[197916] = { makeMistBar(197916, { ns.rgb(0, 255, 94, 0.75) }) },
   -- Beleben
-  [197919] = { makeMistBar(197919, { ns.rgb(255, 215, 0, 0.75) }) },
+  --[197919] = { makeMistBar(197919, { ns.rgb(255, 215, 0, 0.75) }) },
   -- Manatee
-  [197908] = { makeDecreasingStatusBar(197908, nil, -30) }
+  [197908] = { makeDecreasingAuraBar(197908, nil, -30) }
 }
 
 
@@ -300,12 +310,14 @@ end
 SLASH_AU_AURA1 = "/auau"
 
 SlashCmdList["AU_AURA"] = function (message, _editBox)
-  if message == "off" then
-    AshranUtilitiesDB.auras.active = false
-  elseif message == "on" then
-    AshranUtilitiesDB.auras.active = true
-  end
-  print(format("Aura tracking active? %s", tostring(AshranUtilitiesDB.auras.active)))
+  ns.wrap(function ()
+    if message == "off" then
+      AshranUtilitiesDB.auras.active = false
+    elseif message == "on" then
+      AshranUtilitiesDB.auras.active = true
+    end
+    print(format("Aura tracking active? %s", tostring(AshranUtilitiesDB.auras.active)))
+  end)
 end
 
 local function debugAura(unitTarget, auraData)
@@ -347,12 +359,10 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
         debugPrint(format("%s, track? %s", message, tostring(buff.track)), ns.hex2rgb(aurasColour))
       end
 
-      if isExpirationsActive() then
-        local list = expirations[auraData.spellId]
-        if list and unitTarget == "player" then
-          for index, expiration in ipairs(list) do
-            expiration.makeCallback(auraData, index)
-          end
+      if isExpirationsActive() and unitTarget == "player" then
+        local list = expirations[auraData.spellId] or {}
+        for index, expiration in ipairs(list) do
+          expiration.makeCallback(auraData, index)
         end
       end
     end

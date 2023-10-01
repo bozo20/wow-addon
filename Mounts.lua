@@ -122,14 +122,7 @@ do
         local mounts = self.lists[type]
 
         if type == "ALL" then
-          local t = {}
-          for k, v in pairs(self.lists) do
-            for i, pair in ipairs(v) do
-              table.insert(t, pair)
-            end
-          end
-
-          mounts = shuffle(t)
+          shuffle(mounts)
         end
 
         local max = #mounts
@@ -146,18 +139,15 @@ do
           if mountCreatureDisplayInfoLink == nil then
             mountCreatureDisplayInfoLink = GetSpellLink(spellID)
           end
-          isUsable = not isActive
 
-          local matchesPredicate = predicateFunc == nil or predicateFunc(name, spellID)
-          isUsable = isUsable and matchesPredicate
-          if isUsable then break end
+          if predicateFunc == nil or predicateFunc(name, spellID) then
+            if isUsable and not isActive then break end
 
-          if matchesPredicate then
+            local creatureDisplayInfoID, description, source, isSelfMount, mountTypeID, uiModelSceneID, animID, spellVisualKitID, disablePlayerMountPreview = C_MountJournal.GetMountInfoExtraByID(mountID)
             ns.print(format("skipped: %s (id = %d, typeID = %d)", name, mountID, mountTypeID))
             skipped = skipped + 1
           end
         end
-
         ns.print(format("summoning %d %s (%s, start: %d, skipped: %d)", mountID, mountCreatureDisplayInfoLink or "no link", tostring(type), randomIndex, skipped), colours(type))
         C_MountJournal.SummonByID(mountID)
       end,
@@ -166,7 +156,8 @@ do
         ["flying"] = {},
         ["advflying"] = {},
         ["swimming"] = {},
-        ["zoned"] = {}
+        ["zoned"] = {},
+        ["ALL"] = {}
       }
     },
     __call = function (self, mountTypeID, mountID, name)
@@ -179,6 +170,7 @@ do
           local mappingType = type(mapping)
           if mappingType == "boolean" then
             table.insert(self.lists[k], { mountID, name })
+            table.insert(self.lists.ALL, { mountID, name })
           end
         end
       end
@@ -192,7 +184,7 @@ local function readMounts()
   for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
     if not mounts[mountID] then
       local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
-      if isCollected and mounts:isFactionUsable(isFactionSpecific, faction) then
+      if isUsable then
         local creatureDisplayInfoID, description, source, isSelfMount, mountTypeID, uiModelSceneID, animID, spellVisualKitID, disablePlayerMountPreview = C_MountJournal.GetMountInfoExtraByID(mountID)
         mounts(mountTypeID, mountID, name)
       end
@@ -230,6 +222,7 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
         end
       end
 
+      mounts:debug()
       return
     end
 
@@ -242,11 +235,11 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
     if message == "info" then
       ns.print("Mounts info:")
       mounts:debug()
-    elseif IsAltKeyDown() or UnitInBattleground("player") then
-      mounts:random("ground")
     elseif IsShiftKeyDown() then
       ns.print("Dismount!", colours("dismount"))
       Dismount()
+    elseif IsAltKeyDown() or UnitInBattleground("player") then
+      mounts:random("ground")
     elseif IsControlKeyDown() then
       mounts:random("flying")
     elseif IsAdvancedFlyableArea() then
@@ -313,11 +306,9 @@ ns.Mounts = {
     if term == "" then return results end
 
     local pattern = format("%s", term)
-    for key, list in pairs(mounts.lists) do
-      for _, entry in ipairs(list) do
-        if string.find(string.lower(entry[2]), string.lower(pattern)) then
-          table.insert(results, format("id: %d, name: %s", entry[1], entry[2]))
-        end
+    for _, entry in ipairs(mounts.lists.ALL) do
+      if string.find(string.lower(entry[2]), string.lower(pattern)) then
+        table.insert(results, format("id: %d, name: %s", entry[1], entry[2]))
       end
     end
 
