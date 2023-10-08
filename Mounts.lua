@@ -97,8 +97,8 @@ do
   --      exchange a[i] and a[j]
   local function shuffle(t)
     local n = #t
-    for i = 1, n - 3 do
-      local j = math.random(i, n - 1)
+    for i = n, 2, -1 do
+      local j = math.random(1, i)
       t[i], t[j] = t[j], t[i]
     end
     return t
@@ -227,17 +227,17 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
     end
 
     if UnitAffectingCombat("player") then ns.print("In combat!", ns.hex2rgb("cf0000")) return end
-
     if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
-    if IsSwimming() or message == "swimming" then mounts:random("swimming") return end
 
     -- print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
-    if message == "info" then
-      ns.print("Mounts info:")
-      mounts:debug()
-    elseif IsShiftKeyDown() then
+    if IsShiftKeyDown() then
       ns.print("Dismount!", colours("dismount"))
       Dismount()
+    elseif IsSwimming() or message == "swimming" then
+      mounts:random("swimming")
+    elseif message == "info" then
+      ns.print("Mounts info:")
+      mounts:debug()
     elseif IsAltKeyDown() or UnitInBattleground("player") then
       mounts:random("ground")
     elseif IsControlKeyDown() then

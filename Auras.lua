@@ -370,6 +370,23 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
 
   if updateInfo.updatedAuraInstanceIDs and next(updateInfo.updatedAuraInstanceIDs) then
     for _, auraInstanceID in ipairs(updateInfo.updatedAuraInstanceIDs) do
+      if not auras[auraInstanceID] then
+        local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID(unitTarget, auraInstanceID)
+        if auraData then
+          local buff = buffs[auraData.spellId]
+          if buff then
+            local source = auraData.sourceUnit and UnitName(auraData.sourceUnit) or format("fail: %s", auraData.name)
+            auras[auraData.auraInstanceID] = { source, buff }
+
+            if isExpirationsActive() and unitTarget == "player" then
+              local list = expirations[auraData.spellId] or {}
+              for index, expiration in ipairs(list) do
+                expiration.makeCallback(auraData, index)
+              end
+            end
+          end
+        end
+      end
     end
   end
 
@@ -398,7 +415,7 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
 end
 
 function f:PLAYER_ENTERING_BATTLEGROUND()
-  debugPrint(format("entering battleground %s", GetRealZoneText()))
+  debugPrint(format("entering battleground %s", GetRealZoneText() or "fail!"))
   f.watchPlayers()
 end
 
