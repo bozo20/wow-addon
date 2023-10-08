@@ -91,10 +91,6 @@ do
     ["zoned"] = { [232] = isVashjir,  [241] = isAhnQiraj }
   }
 
-  -- To shuffle an array a of n elements (indices 0..n-1):
-  -- for i from 0 to n−2 do
-  --      j ← random integer such that i ≤ j < n
-  --      exchange a[i] and a[j]
   local function shuffle(t)
     local n = #t
     for i = n, 2, -1 do
