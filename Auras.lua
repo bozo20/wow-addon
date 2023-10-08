@@ -340,7 +340,6 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
         auras[auraData.auraInstanceID] = { source, buff }
 
         local message = format("%s used %s", source, buff.name)
-        -- ns.log("")
         if buff.track and UnitInBattleground("player") then
           local message = format("{rt4} %s", message)
           if buff.itemID then

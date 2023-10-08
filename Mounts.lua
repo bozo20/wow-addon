@@ -109,9 +109,8 @@ do
       end,
       isFactionUsable = function (self, isFactionSpecific, faction)
         if not isFactionSpecific then return true end
-      
-        local englishFaction, localizedFaction = UnitFactionGroup("player")
 
+        local englishFaction, localizedFaction = UnitFactionGroup("player")
         return factionMap[englishFaction] == faction
       end,
       random = function (self, type, predicateFunc)
@@ -205,22 +204,6 @@ SLASH_AU_MOUNT1 = "/aumount"
 SlashCmdList["AU_MOUNT"] = function (message, editBox)
   ns.wrap(function ()
     readMounts()
-
-    if message == "debug" then
-      for i, pair in ipairs(mounts.lists.ground) do
-        local mountID, name = unpack(pair)
-        local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
-        local mountCreatureDisplayInfoLink = C_MountJournal.GetMountLink(spellID)
-        if mountCreatureDisplayInfoLink == nil then
-          -- 306423
-          -- /dump C_MountJournal.GetMountLink(306423)
-          ns.print(format("nil link: %d. name = %s, mountID = %d, spellID = %d", i, name, mountID, spellID))
-        end
-      end
-
-      mounts:debug()
-      return
-    end
 
     if UnitAffectingCombat("player") then ns.print("In combat!", ns.hex2rgb("cf0000")) return end
     if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
