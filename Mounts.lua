@@ -116,9 +116,7 @@ do
       random = function (self, type, predicateFunc)
         local mounts = self.lists[type]
 
-        if type == "ALL" then
-          shuffle(mounts)
-        end
+        if type == "ALL" then shuffle(mounts) end
 
         local max = #mounts
         local randomIndex = math.random(max)
@@ -186,7 +184,6 @@ local function readMounts()
     end
   end
 end
-
 
 function f:MOUNT_JOURNAL_USABILITY_CHANGED(event)
   readMounts()

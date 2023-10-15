@@ -343,7 +343,7 @@ function f:UNIT_AURA(event, unitTarget, updateInfo)
         if buff.track and UnitInBattleground("player") then
           local message = format("{rt4} %s", message)
           if buff.itemID then
-            message = format("%s (%s)", message, (select(2, GetItemInfo(buff.itemID))))
+            message = format("%s %s", message, (select(2, GetItemInfo(buff.itemID))))
           end
 
           if unitTarget == "player" then
