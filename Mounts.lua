@@ -202,14 +202,16 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
   ns.wrap(function ()
     readMounts()
 
+    if IsShiftKeyDown() then
+      ns.print("Dismount!", colours("dismount"))
+      Dismount()
+      return
+    end
     if UnitAffectingCombat("player") then ns.print("In combat!", ns.hex2rgb("cf0000")) return end
     if IsIndoors() then ns.print("Indoors!", colours("dismount")) return end
 
     -- print(format("IsAltKeyDown() = %s, IsShiftKeyDown() = %s", tostring(IsAltKeyDown()), tostring(IsShiftKeyDown())))
-    if IsShiftKeyDown() then
-      ns.print("Dismount!", colours("dismount"))
-      Dismount()
-    elseif IsSwimming() or message == "swimming" then
+    if IsSwimming() or message == "swimming" then
       mounts:random("swimming")
     elseif message == "info" then
       ns.print("Mounts info:")
