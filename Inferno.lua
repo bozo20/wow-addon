@@ -51,7 +51,8 @@ end
 local function announceInferno()
   if UnitInBattleground("player") and GetBattlefieldInstanceExpiration() == 0 then
     makeLocalRaidwarning("ancient inferno spawned")
-    SendChatMessage("{rt8} ancient inferno spawned", "INSTANCE_CHAT")
+    local link = GetSpellLink(168506)
+    SendChatMessage(format("{rt8} ancient inferno spawned, drops %s", link), "INSTANCE_CHAT")
   end
 end
 
