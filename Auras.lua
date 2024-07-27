@@ -118,6 +118,67 @@ local function makeRepeatingExpiration(id, after, announce)
   return expiration
 end
 
+local function makeOverheadAura(id, offset)
+  local expiration = {}
+  local formatString = "%.2f"
+  local alpha = 1.0
+  local offset = offset or 0
+
+  expiration.makeCallback = function (auraData, index)
+    local remainingTime = auraData.expirationTime - GetTime()
+    local maxValue = remainingTime * 10
+    local name = auraData.name
+
+    local frameId = "OverheadAura"..id
+    local statusBar = _G[frameId] or CreateFrame("StatusBar", frameId, UIParent)
+    statusBar:SetPoint("CENTER", 0, -30 + offset)
+    -- statusBar:SetReverseFill(not true)
+    statusBar:SetSize(100, 30)
+    statusBar:SetMinMaxValues(0, maxValue)
+
+    statusBar.texture = statusBar.texture or statusBar:CreateTexture()
+    statusBar.texture:SetColorTexture(ns.rgb(0, 217, 255, alpha))
+    statusBar:SetStatusBarTexture(statusBar.texture)
+
+    statusBar:SetValue(maxValue)
+
+    statusBar.fs = statusBar.fs or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    statusBar.fs:SetPoint("CENTER")
+    statusBar.fs:SetText(format(formatString, remainingTime))
+
+    local icon = select(8, GetSpellInfo(id))
+    statusBar.icon = statusBar.icon or statusBar:CreateTexture()
+    statusBar.icon:SetTexture(icon)
+    statusBar.icon:SetPoint("LEFT", -30, 0)
+    statusBar.icon:SetSize(30, 30)
+    statusBar.icon:SetAlpha(alpha)
+    statusBar.applications = statusBar.applications or statusBar:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    statusBar.applications:SetPoint("LEFT", -20, 0)
+    statusBar.applications:SetText(format("%d", auraData.applications))
+
+    local function callback(timer)
+      ns.wrap(function ()
+        local aura = C_UnitAuras.GetPlayerAuraBySpellID(id)
+        if not aura then
+          statusBar:Hide()
+          timer:Cancel()
+          return
+        end
+        statusBar:Show()
+
+        local remainingTime = aura.expirationTime - GetTime()
+        statusBar.fs:SetText(format(formatString, remainingTime))
+        statusBar.applications:SetText(format("%d", aura.applications))
+        statusBar:SetValue(remainingTime * 10)
+      end)
+    end
+
+    statusBar:Show()
+    C_Timer.NewTicker(0.05, callback)
+  end
+
+  return expiration
+end
 
 local function makeDecreasingAuraBar(id, name, offset)
   local expiration = {}
@@ -285,11 +346,12 @@ local expirations = {
   -- Beleben
   --[197919] = { makeMistBar(197919, { ns.rgb(255, 215, 0, 0.75) }) },
   -- Manatee
-  [197908] = { makeDecreasingAuraBar(197908, nil, -30) }
+  [197908] = { makeDecreasingAuraBar(197908, nil, -30) },
+  [53390] = { makeOverheadAura(53390, -90) }
 }
 
 
-local auras = { store = {} }
+local auras = { store = {}, debug = not true }
 do
   local aurasMeta = {
     __index = function (self, auraInstanceID)

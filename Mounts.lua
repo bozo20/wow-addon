@@ -130,7 +130,7 @@ do
           local name, spellID, icon, isActive, isUsable, sourceType, isFavorite, isFactionSpecific, faction, shouldHideOnChar, isCollected, mountID, isForDragonriding = C_MountJournal.GetMountInfoByID(mountID)
           mountCreatureDisplayInfoLink = C_MountJournal.GetMountLink(spellID)
           if mountCreatureDisplayInfoLink == nil then
-            mountCreatureDisplayInfoLink = GetSpellLink(spellID)
+            mountCreatureDisplayInfoLink = C_Spell.GetSpellLink(spellID)
           end
 
           if predicateFunc == nil or predicateFunc(name, spellID) then

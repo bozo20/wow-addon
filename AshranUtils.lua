@@ -94,7 +94,8 @@ function AddonOptions:Initialize()
     EventRegistry:TriggerEvent("AshranUtils.AddonOptions.OnReset")
   end)
 
-  InterfaceOptions_AddCategory(self.panel_main)
+  -- does not work
+  -- InterfaceOptions_AddCategory(self.panel_main)
 
   -- sub panel
   -- local panel_inferno = CreateFrame("Frame")
