@@ -146,7 +146,7 @@ local function makeOverheadAura(id, offset)
     statusBar.fs:SetPoint("CENTER")
     statusBar.fs:SetText(format(formatString, remainingTime))
 
-    local icon = select(8, GetSpellInfo(id))
+    local icon = C_Spell.GetSpellInfo(id).iconID
     statusBar.icon = statusBar.icon or statusBar:CreateTexture()
     statusBar.icon:SetTexture(icon)
     statusBar.icon:SetPoint("LEFT", -30, 0)
@@ -208,7 +208,7 @@ local function makeDecreasingAuraBar(id, name, offset)
     statusBar.fs:SetPoint("CENTER")
     statusBar.fs:SetText(format(formatString, name, remainingTime))
 
-    local icon = select(8, GetSpellInfo(id))
+    local icon = C_Spell.GetSpellInfo(id).iconID
     statusBar.icon = statusBar.icon or statusBar:CreateTexture()
     statusBar.icon:SetTexture(icon)
     statusBar.icon:SetPoint("LEFT", -30, 0)
@@ -258,7 +258,7 @@ local function makeCollectingBar(id)
     statusBar:SetStatusBarTexture(statusBar.texture)
     statusBar:SetValue(0)
 
-    local icon = select(8, GetSpellInfo(id))
+    local icon = C_Spell.GetSpellInfo(id).iconID
     statusBar.icon = statusBar.icon or statusBar:CreateTexture()
     statusBar.icon:SetTexture(icon)
     statusBar.icon:SetPoint("LEFT", -30, 0)
