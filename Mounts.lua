@@ -220,7 +220,7 @@ SlashCmdList["AU_MOUNT"] = function (message, editBox)
       mounts:random("ground")
     elseif IsControlKeyDown() then
       mounts:random("flying")
-    elseif IsAdvancedFlyableArea() then
+    elseif false and IsAdvancedFlyableArea() then
       mounts:random("advflying")
     else
       mounts:random("flying")

@@ -51,8 +51,6 @@ local buffs = { --[383648] = makeBuff(false, "Erdschild"),
                 [171249] = makeBuff(true, "prot", "INSTANCE_CHAT", 116411),
                 [357650] = makeBuff(false, "mini BL"),
                 [157504] = makeBuff(false, "cloudburst totem"),
-                [197916] = makeBuff(false, "Lebenszyklus (Beleben)"),
-                [197919] = makeBuff(false, "Lebenszyklus (Einhüllender Nebel)"),
                 --[193534] = makeBuff(false, "Beständiger Fokus"),
                 --[260242] = makeBuff(false, "Präzise Schüsse"),
                 --[164273] = makeBuff(false, "Einsamer Wolf"),
@@ -329,6 +327,14 @@ local function makeMistBar(id, colourAsTable)
 end
 
 local expirations = {
+  -- Aspekt der Harmonie
+  -- [450521] = { makeCollectingBar(450521) },
+  -- [450526] = { makeCollectingBar(450526) },
+  -- [450531] = { makeCollectingBar(450531) },
+  -- Gekonnte Schüsse
+  [257622] = { makeDecreasingAuraBar(257622, "", -90) },
+  -- Optimierung
+  [342076] = { makeOverheadAura(342076, -30) },
   -- Präzise Schüsse
   [260242] = { makeDecreasingAuraBar(260242, "", -60) },
   -- Beständiger Fokus
@@ -347,7 +353,9 @@ local expirations = {
   --[197919] = { makeMistBar(197919, { ns.rgb(255, 215, 0, 0.75) }) },
   -- Manatee
   [197908] = { makeDecreasingAuraBar(197908, nil, -30) },
-  [53390] = { makeOverheadAura(53390, -90) }
+  -- Springflut
+  [53390] = { makeOverheadAura(53390, -90) },
+  [450711] = { makeDecreasingAuraBar(450711, "AdH", -90) },
 }
 
 
